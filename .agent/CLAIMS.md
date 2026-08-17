@@ -18,7 +18,7 @@
 3. git add .agent/CLAIMS.md
    git commit -m "[claude] claim: today"
    git push origin develop
-4. git checkout -b feature/today-claude
+4. git checkout -b feature/today        # 에이전트 이름을 붙이지 않습니다
 ```
 
 ## 규칙

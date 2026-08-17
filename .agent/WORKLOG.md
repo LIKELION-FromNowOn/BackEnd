@@ -10,7 +10,7 @@
 - 쓴 스텁: VerdictPort (subtract 미완이라)
 - 남은 것: POST /today/reject 의 none 분기
 - 막힌 것: 없음
-- 브랜치: feature/today-claude → develop 머지 와료
+- 브랜치: feature/today → develop 머지 와료
 ```
 
 **「막힌 것」을 반드시 적으십시오.** 다음 사람이 같은 데서 또 막힙니다.
@@ -29,7 +29,7 @@
 - 남은 것: `SubtractPipelineCheck` 를 JUnit 으로 옮기기 (지금은 `main` 실행). DB 스키마 나오면 ⑧ 저장 + `VerdictPort` 실구현
 - **막힌 것: `./gradlew test` 가 이 PC 에서만 실패합니다.** 한글 경로 + Gradle 워커 argfile 인코딩 문제 —
   `REQUESTS.md #4` 에 원인·확인·선택지 3가지를 적었습니다. **코드 문제가 아닙니다** (영문 경로에서는 `BUILD SUCCESSFUL`)
-- 브랜치: `feature/subtract-claude` **push 만** 완료. **`develop` 머지는 사람이** (`develop` · `main` 무접촉)
+- 브랜치: `feature/subtract` **push 만** 완료. **`develop` 머지는 사람이** (`develop` · `main` 무접촉)
 
 ---
 
