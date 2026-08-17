@@ -5,7 +5,9 @@
 
 ## 이 저장소에서
 
-- 커밋 메시지 접두어는 **`[claude]`** 입니다
+- 커밋 메시지 접두어는 **`[swonseok]`** 입니다. **`[claude]` 를 쓰지 마십시오**
+  - 접두어는 「누가 타이핑했나」가 아니라 **「누구 작업인가」**를 나타냅니다. 이 저장소에서 Claude Code 는 송원석 님을 대신해 씁니다
+  - Claude 가 썼다는 것은 `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>` 트레일러로 남깁니다
 - 작업 브랜치는 **`feature/<패키지>-<작업자 아이디>`** 입니다 — 예 `feature/subtract-swonseok`
   - **아이디는 사람 것입니다.** `claude` 를 붙이지 마십시오 (`feature/subtract-claude` 아님)
   - **한 사람당 `feature/*` 는 최대 3개.** 네 번째가 필요하면 하나를 머지하고 지운 뒤 여십시오
