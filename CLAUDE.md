@@ -12,6 +12,9 @@
   - **아이디는 사람 것입니다.** `claude` 를 붙이지 마십시오 (`feature/subtract-claude` 아님)
   - **한 사람당 `feature/*` 는 최대 3개.** 네 번째가 필요하면 하나를 머지하고 지운 뒤 여십시오
   - 이름이 에이전트를 구분하지 않으니 **`.agent/CLAIMS.md` 선점이 유일한 충돌 방지 장치**입니다. 건너뛰지 마십시오
+- **`git push --force` · `--force-with-lease` · `rebase` · `filter-branch` 를 쓰지 않습니다. 예외 없습니다**
+  - 이미 push 한 커밋은 메시지가 틀렸어도 **고치지 않습니다.** 다음 커밋부터 맞춥니다
+  - 되돌릴 것이 있으면 `git revert` 로 **새 커밋을 쌓습니다.** 이력을 되감지 않습니다
 - 작업 전 `.agent/CLAIMS.md` 를 읽고 선점 줄을 추가한 뒤 시작합니다
 - **`docs/` 를 수정하지 않습니다.** 틀린 것을 발견하면 `.agent/REQUESTS.md` 에 적습니다
 
