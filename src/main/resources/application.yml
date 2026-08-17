@@ -1,0 +1,45 @@
+# 공통 설정. 접속 정보·키는 여기에 적지 마십시오.
+# 로컬 값은 application-local.yml 에 두고, 그 파일은 .gitignore 에 이미 있습니다.
+
+spring:
+  application:
+    name: now
+  profiles:
+    default: local
+  jpa:
+    hibernate:
+      ddl-auto: validate        # 스키마는 사람이 만듭니다. 앱이 테이블을 바꾸지 않습니다
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false         # 컨트롤러에서 지연 로딩이 터지는 것을 막습니다
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1       # 명세서의 {BASE_URL}/api/v1 과 맞춥니다
+
+app:
+  cors:
+    # 프론트 배포 주소를 여기에. 빠뜨리면 화면에서 API 가 전부 실패합니다
+    origins: http://localhost:5173
+
+---
+# local — DB 가 아직 없어도 서버가 뜨도록 메모리 DB 를 씁니다.
+# 이철희 님의 PostgreSQL 접속 정보가 나오면 application-local.yml 로 덮어쓰면 됩니다.
+# 그 파일이 있으면 아래 값보다 우선합니다.
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:h2:mem:now;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop     # 메모리 DB 라 매번 새로 만듭니다
+  h2:
+    console:
+      enabled: true

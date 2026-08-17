@@ -1,0 +1,14 @@
+# 이 파일을 application-local.yml 로 복사해서 각자 값을 채우십시오.
+# application-local.yml 은 커밋되지 않습니다 (.gitignore).
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/now
+    username: 여기에
+    password: 여기에
+
+app:
+  cors:
+    origins: http://localhost:5173
+  llm:
+    api-key: 여기에
