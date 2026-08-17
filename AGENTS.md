@@ -166,20 +166,31 @@ org.hibernate.DuplicateMappingException: Duplicate entity mapping User
 |---|---|---|
 | `main` | 배포되는 것만 — 8/16 · 8/20 · 8/21 세 번 | 이철희 |
 | `develop` | 통합. **항상 빌드가 통과해야 합니다** | 전원 |
-| `feature/<패키지>` | 작업 단위 | 소유자 |
+| `feature/<패키지>-<작업자>` | 작업 단위 | 소유자 |
 
-작업 브랜치는 **패키지 이름만** 씁니다. **에이전트 이름을 붙이지 않습니다.**
+작업 브랜치는 **패키지 이름 + 작업자 아이디**입니다.
+**작업자는 사람입니다. 에이전트 이름(`claude` · `codex`)을 쓰지 않습니다.**
+Claude Code 가 만들든 Codex 가 만들든, **그 브랜치의 주인인 사람의 아이디**를 붙입니다.
+
+| 사람 | 아이디 |
+|---|---|
+| 송원석 | `swonseok` |
+| 이철희 | (본인이 정합니다) |
+| 김민정 | (본인이 정합니다) |
 
 ```
-feature/today      feature/subtract      feature/master
+feature/subtract-swonseok      feature/coach-swonseok
+feature/today-<김민정 아이디>    feature/item-<이철희 아이디>
 ```
+
+**한 사람이 여는 `feature/*` 는 최대 3개까지입니다.** 그 이상이면 PR 이 흩어져 마감 전에 머지가 밀립니다.
+네 번째가 필요하면 **먼저 하나를 `develop` 에 머지하고 지운 뒤** 여십시오.
 
 **같은 브랜치에 두 에이전트가 커밋하지 않습니다.**
 
-> **브랜치 이름에 에이전트 이름이 없으므로, 이제 충돌을 막는 것은 `.agent/CLAIMS.md` 선점 하나뿐입니다.**
-> 예전에는 `feature/today-claude` 와 `feature/today-codex` 로 이름이 갈려 부딪혀도 티가 났지만,
-> 지금은 둘 다 `feature/today` 를 만듭니다. **선점을 건너뛰면 그대로 덮어씁니다.**
-> 6장을 반드시 지키십시오.
+> **브랜치 이름이 에이전트를 구분하지 않으므로, 충돌을 막는 것은 `.agent/CLAIMS.md` 선점 하나뿐입니다.**
+> Claude Code 와 Codex 가 같은 패키지를 잡으면 **둘 다 `feature/<패키지>-<같은 사람>` 을 만듭니다.**
+> **선점을 건너뛰면 그대로 덮어씁니다.** 6장을 반드시 지키십시오.
 
 커밋 메시지는 **접두어로 누가 했는지 남깁니다.** 사람은 **본인 이름(영문)**을 씁니다.
 
@@ -221,8 +232,8 @@ git add .agent/CLAIMS.md
 git commit -m "[claude] claim: today"
 git push origin develop
 
-# 4. 작업 브랜치 생성 (에이전트 이름을 붙이지 않습니다)
-git checkout -b feature/today
+# 4. 작업 브랜치 생성 — 패키지 + 작업자 아이디 (에이전트 이름이 아닙니다)
+git checkout -b feature/today-swonseok
 ```
 
 **선점 줄 형식** (`.agent/CLAIMS.md`)
@@ -249,7 +260,7 @@ git checkout -b feature/today
 
 # 2. develop 에 머지
 git checkout develop && git pull origin develop
-git merge feature/today
+git merge feature/today-swonseok
 git push origin develop
 
 # 3. CLAIMS.md 에서 자기 줄을 지웁니다
