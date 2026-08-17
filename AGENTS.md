@@ -166,23 +166,27 @@ org.hibernate.DuplicateMappingException: Duplicate entity mapping User
 |---|---|---|
 | `main` | 배포되는 것만 — 8/16 · 8/20 · 8/21 세 번 | 이철희 |
 | `develop` | 통합. **항상 빌드가 통과해야 합니다** | 전원 |
-| `feature/<패키지>-<에이전트>` | 작업 단위 | 소유자 |
+| `feature/<패키지>` | 작업 단위 | 소유자 |
 
-에이전트가 만드는 브랜치는 **패키지 이름 + 에이전트 이름**입니다.
+작업 브랜치는 **패키지 이름만** 씁니다. **에이전트 이름을 붙이지 않습니다.**
 
 ```
-feature/today-claude      feature/today-codex
-feature/subtract-claude   feature/subtract-codex
+feature/today      feature/subtract      feature/master
 ```
 
 **같은 브랜치에 두 에이전트가 커밋하지 않습니다.**
 
-커밋 메시지는 **접두어로 누가 했는지 남깁니다.**
+> **브랜치 이름에 에이전트 이름이 없으므로, 이제 충돌을 막는 것은 `.agent/CLAIMS.md` 선점 하나뿐입니다.**
+> 예전에는 `feature/today-claude` 와 `feature/today-codex` 로 이름이 갈려 부딪혀도 티가 났지만,
+> 지금은 둘 다 `feature/today` 를 만듭니다. **선점을 건너뛰면 그대로 덮어씁니다.**
+> 6장을 반드시 지키십시오.
+
+커밋 메시지는 **접두어로 누가 했는지 남깁니다.** 사람은 **본인 이름(영문)**을 씁니다.
 
 ```
-[claude] feat(today): GET /today 추천 조회 구현
-[codex]  fix(item): PUT /me/items 최소 3개 검증 추가
-[human]  chore: gradle 의존성 추가
+[claude]   feat(today): GET /today 추천 조회 구현
+[codex]    fix(item): PUT /me/items 최소 3개 검증 추가
+[swonseok] chore: gradle 의존성 추가
 ```
 
 ### 하지 말 것
@@ -217,8 +221,8 @@ git add .agent/CLAIMS.md
 git commit -m "[claude] claim: today"
 git push origin develop
 
-# 4. 작업 브랜치 생성
-git checkout -b feature/today-claude
+# 4. 작업 브랜치 생성 (에이전트 이름을 붙이지 않습니다)
+git checkout -b feature/today
 ```
 
 **선점 줄 형식** (`.agent/CLAIMS.md`)
@@ -245,7 +249,7 @@ git checkout -b feature/today-claude
 
 # 2. develop 에 머지
 git checkout develop && git pull origin develop
-git merge feature/today-claude
+git merge feature/today
 git push origin develop
 
 # 3. CLAIMS.md 에서 자기 줄을 지웁니다
