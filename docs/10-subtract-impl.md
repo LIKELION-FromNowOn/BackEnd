@@ -89,9 +89,20 @@ log.info("검증 교정 {}건 {}", out.validationFixes().size(), out.validationF
 
 ## 돌려 보는 법
 
+**프로젝트가 올라온 지금은 그래들로 돌립니다.**
+
 ```bash
-javac -d /tmp/out $(find src -name '*.java')
-java -cp /tmp/out com.youin.now.subtract.SubtractPipelineCheck
+./gradlew build -x test
+
+# Windows
+java -cp "build/classes/java/test;build/classes/java/main" com.youin.now.subtract.SubtractPipelineCheck
+# macOS · Linux
+java -cp "build/classes/java/test:build/classes/java/main" com.youin.now.subtract.SubtractPipelineCheck
 ```
 
-스프링 프로젝트가 올라온 뒤에는 **JUnit 으로 옮기십시오.** 단정문은 그대로 쓸 수 있습니다.
+**「통과 31 · 실패 0」이 나와야 정상입니다.** 8/17 에 실제로 확인했습니다.
+
+> **JUnit 으로 옮기지 마십시오 — 8/20 기능 동결 전까지는.**
+> 경로에 한글이 있는 PC 에서 `:test` 가 실패합니다(Gradle argfile 인코딩 문제).
+> 지금은 JUnit 테스트가 0건이라 `:test` 가 할 일이 없어 아무 손해가 없는데,
+> 테스트를 추가하는 순간 그 사람들의 빌드가 막힙니다. 자세한 것은 `HANDOFF.md` 12장 · `.agent/REQUESTS.md` #4.
