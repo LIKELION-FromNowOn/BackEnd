@@ -30,6 +30,10 @@
 - **막힌 것: `./gradlew test` 가 이 PC 에서만 실패합니다.** 한글 경로 + Gradle 워커 argfile 인코딩 문제 —
   `REQUESTS.md #4` 에 원인·확인·선택지 3가지를 적었습니다. **코드 문제가 아닙니다** (영문 경로에서는 `BUILD SUCCESSFUL`)
 - 브랜치: `feature/subtract-swonseok` **push 만** 완료. **`develop` 머지는 사람이** (`develop` · `main` 무접촉)
+- **이력 재작성 1회** — 커밋 접두어를 `[swonseok]` 으로 통일하면서 이 브랜치의 커밋 메시지를 다시 썼습니다.
+  `AGENTS.md` 5장 금지 4번(force-push)의 **1회 예외**이며, 송원석 본인 브랜치이고 `develop` 머지 전이라
+  남이 받아간 커밋이 없어 안전하다고 판단했습니다. **`--force-with-lease` 로 밀었고 해시가 전부 바뀌었습니다.**
+  `develop` · `main` 은 건드리지 않았습니다
 
 ---
 
