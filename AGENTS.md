@@ -105,22 +105,26 @@ com.youin.now
 
 ## 4. 코드 규칙 넷
 
-### 4-1. `User` 를 넘기지 않고 `Long userId` 만 넘깁니다
+### 4-1. `AuthUser` 를 넘기지 않고 사용자 번호(`String`)만 넘깁니다
 
 ```java
 // 이렇게
 @GetMapping("/today")
-public ApiResponse<TodayRes> get(@CurrentUser Long userId) { ... }
+public ApiResponse<TodayRes> get(@CurrentUser String userId) { ... }
 
 @Entity @Table(name = "actions")
 public class Action {
-    @Id @GeneratedValue private Long id;
-    @Column(nullable = false) private Long userId;   // @ManyToOne User 가 아님
+    @Id private String id;                              // ac_ + ULID. common/id/Ids 로 만듭니다
+    @Column(nullable = false) private String userId;    // @ManyToOne AuthUser 가 아님
 }
 ```
 
-`@ManyToOne User` 를 쓰면 14개 패키지가 전부 `auth.User` 를 import 하게 되고, 컬럼 하나 고칠 때 다 깨집니다.
+`@ManyToOne AuthUser` 를 쓰면 14개 패키지가 전부 `auth.AuthUser` 를 import 하게 되고, 컬럼 하나 고칠 때 다 깨집니다.
 DB 외래키는 그대로 겁니다. **끊는 것은 자바 객체 참조뿐**입니다.
+
+> **8/18 정정 — `Long` 이 아니라 `String` 입니다.** ID 가 「접두어 + ULID」(`us_01H8X…`)이고
+> `docs/schema_v63.sql` 이 22테이블의 PK·FK 를 전부 `text` 로 정의했습니다.
+> **`@GeneratedValue` 를 쓰지 마십시오.** 자동 증가가 아니라 `common/id/Ids` 로 만들어 넣습니다.
 
 ### 4-2. 클래스 이름은 자기 패키지 이름으로 시작합니다
 
@@ -166,52 +170,24 @@ org.hibernate.DuplicateMappingException: Duplicate entity mapping User
 |---|---|---|
 | `main` | 배포되는 것만 — 8/16 · 8/20 · 8/21 세 번 | 이철희 |
 | `develop` | 통합. **항상 빌드가 통과해야 합니다** | 전원 |
-| `feature/<패키지>-<작업자>` | 작업 단위 | 소유자 |
+| `feature/<패키지>-<에이전트>` | 작업 단위 | 소유자 |
 
-작업 브랜치는 **패키지 이름 + 작업자 아이디**입니다.
-**작업자는 사람입니다. 에이전트 이름(`claude` · `codex`)을 쓰지 않습니다.**
-Claude Code 가 만들든 Codex 가 만들든, **그 브랜치의 주인인 사람의 아이디**를 붙입니다.
-
-| 사람 | 아이디 |
-|---|---|
-| 송원석 | `swonseok` |
-| 이철희 | (본인이 정합니다) |
-| 김민정 | (본인이 정합니다) |
+에이전트가 만드는 브랜치는 **패키지 이름 + 에이전트 이름**입니다.
 
 ```
-feature/subtract-swonseok      feature/coach-swonseok
-feature/today-<김민정 아이디>    feature/item-<이철희 아이디>
+feature/today-claude      feature/today-codex
+feature/subtract-claude   feature/subtract-codex
 ```
-
-**한 사람이 여는 `feature/*` 는 최대 3개까지입니다.** 그 이상이면 PR 이 흩어져 마감 전에 머지가 밀립니다.
-네 번째가 필요하면 **먼저 하나를 `develop` 에 머지하고 지운 뒤** 여십시오.
 
 **같은 브랜치에 두 에이전트가 커밋하지 않습니다.**
 
-> **브랜치 이름이 에이전트를 구분하지 않으므로, 충돌을 막는 것은 `.agent/CLAIMS.md` 선점 하나뿐입니다.**
-> Claude Code 와 Codex 가 같은 패키지를 잡으면 **둘 다 `feature/<패키지>-<같은 사람>` 을 만듭니다.**
-> **선점을 건너뛰면 그대로 덮어씁니다.** 6장을 반드시 지키십시오.
-
-커밋 메시지는 **접두어로 누가 했는지 남깁니다. 접두어는 「작업자 아이디」입니다** — 브랜치와 같은 원칙입니다.
-
-**Claude Code 가 쓰든 Codex 가 쓰든, 그 작업의 주인인 사람의 아이디를 붙입니다.**
-누가 실제로 타이핑했는지는 접두어가 아니라 `Co-Authored-By` 트레일러와 `.agent/WORKLOG.md` 가 남깁니다.
+커밋 메시지는 **접두어로 누가 했는지 남깁니다.**
 
 ```
-[swonseok] feat(subtract): 판정 파이프라인 8단계 구현
-[swonseok] fix(safety): 위기 키워드 정규화 누락 수정
-[swonseok] chore: gradle 의존성 추가
+[claude] feat(today): GET /today 추천 조회 구현
+[codex]  fix(item): PUT /me/items 최소 3개 검증 추가
+[human]  chore: gradle 의존성 추가
 ```
-
-**아이디는 위 표와 같습니다.** 송원석 님 작업은 **전부 `[swonseok]`** 입니다.
-
-> **이철희 · 김민정 님 접두어는 아직 정해지지 않았습니다.**
-> **본인이 정하시면 됩니다.** 다른 사람이 대신 정하지 않습니다 — 정해지면 위 표에 채워 주십시오.
-> 그때까지 두 분은 쓰시던 방식을 그대로 쓰셔도 됩니다.
-
-> **접두어가 틀렸어도 이미 push 한 커밋은 고치지 마십시오.**
-> 고치려면 이력 재작성 + force-push 가 필요한데 **아래 금지 4번에 걸립니다.**
-> 다음 커밋부터 맞추면 됩니다. **이력은 되감지 않고 앞으로만 씁니다.**
 
 ### 하지 말 것
 
@@ -220,7 +196,7 @@ feature/today-<김민정 아이디>    feature/item-<이철희 아이디>
 | 1 | `main` 에 직접 push | 배포본이 깨집니다 |
 | 2 | `feature/*` 끼리 머지 | 이력이 엉킵니다. **반드시 `develop` 을 거칩니다** |
 | 3 | `develop` 빌드를 깬 채로 종료 | 다음 사람이 멈춥니다 |
-| 4 | **`git push --force` · `--force-with-lease` · 이력 재작성 전부** | 남의 커밋이 사라집니다. **예외 없습니다** |
+| 4 | `git push --force` | 남의 커밋이 사라집니다 |
 | 5 | 남의 `feature/*` 에 커밋 | 소유자 규칙과 같습니다 |
 
 ---
@@ -245,8 +221,8 @@ git add .agent/CLAIMS.md
 git commit -m "[claude] claim: today"
 git push origin develop
 
-# 4. 작업 브랜치 생성 — 패키지 + 작업자 아이디 (에이전트 이름이 아닙니다)
-git checkout -b feature/today-swonseok
+# 4. 작업 브랜치 생성
+git checkout -b feature/today-claude
 ```
 
 **선점 줄 형식** (`.agent/CLAIMS.md`)
@@ -273,7 +249,7 @@ git checkout -b feature/today-swonseok
 
 # 2. develop 에 머지
 git checkout develop && git pull origin develop
-git merge feature/today-swonseok
+git merge feature/today-claude
 git push origin develop
 
 # 3. CLAIMS.md 에서 자기 줄을 지웁니다

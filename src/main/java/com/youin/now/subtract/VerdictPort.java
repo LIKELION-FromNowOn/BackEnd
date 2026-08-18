@@ -20,18 +20,18 @@ public interface VerdictPort {
     /**
      * @return 그날 판정이 아직 없으면 {@link Optional#empty()}
      */
-    Optional<VerdictSet> of(Long userId, LocalDate date);
+    Optional<VerdictSet> of(String userId, LocalDate date);
 
     /**
      * 홈 전용. 판정이 없으면 <b>전부 0 인 Summary</b> 를 돌려줍니다 (null 아님).
      */
-    Summary summary(Long userId, LocalDate date);
+    Summary summary(String userId, LocalDate date);
 
     record VerdictSet(List<ItemVerdict> results) {}
 
     /**
      * @param verdict    keep | simplify | reduce | skip | excluded
-     * @param excludedBy excluded 일 때만. floor | clinicNote. 아니면 null
+     * @param excludedBy excluded 일 때만. medical | clinicNote. 아니면 null
      */
     record ItemVerdict(String itemId, String verdict,
                        String reason, String excludedBy) {}
