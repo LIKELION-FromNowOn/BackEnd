@@ -16,12 +16,12 @@ import org.springframework.stereotype.Component;
 public class VerdictPortStub implements VerdictPort {
 
     @Override
-    public Optional<VerdictSet> of(Long userId, LocalDate date) {
+    public Optional<VerdictSet> of(String userId, LocalDate date) {
         return Optional.empty();
     }
 
     @Override
-    public Summary summary(Long userId, LocalDate date) {
+    public Summary summary(String userId, LocalDate date) {
         return new Summary(0, 0, 0, 0, 0);
     }
 }

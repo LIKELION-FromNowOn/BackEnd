@@ -20,13 +20,13 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 @Component
 public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
 
-    /** 인증 필터가 여기에 {@code Long userId} 를 넣습니다. */
+    /** 인증 필터가 여기에 {@code String userId} 를 넣습니다. */
     public static final String ATTR = "now.userId";
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         return parameter.hasParameterAnnotation(CurrentUser.class)
-                && Long.class.equals(parameter.getParameterType());
+                && String.class.equals(parameter.getParameterType());
     }
 
     @Override
@@ -35,7 +35,7 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
         Object v = webRequest.getAttribute(ATTR, RequestAttributes.SCOPE_REQUEST);
-        if (v instanceof Long userId) return userId;
+        if (v instanceof String userId && !userId.isBlank()) return userId;
         throw new ApiException(ErrorCode.UNAUTHORIZED);
     }
 }

@@ -10,5 +10,7 @@ spring:
 app:
   cors:
     origins: http://localhost:5173
+  jwt:
+    secret: 32바이트가_넘는_아무_문자열이나_여기에_적으십시오
   llm:
     api-key: 여기에

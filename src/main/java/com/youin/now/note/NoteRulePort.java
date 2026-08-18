@@ -20,7 +20,7 @@ public interface NoteRulePort {
     /**
      * @return 오늘 기준으로 아직 살아 있는 규칙만. 없으면 <b>빈 리스트</b> (null 아님)
      */
-    List<NoteRule> activeRules(Long userId);
+    List<NoteRule> activeRules(String userId);
 
     /**
      * @param sentenceNo  안내문 원문 문장 번호. 화면에서 원문으로 이동할 때 씁니다

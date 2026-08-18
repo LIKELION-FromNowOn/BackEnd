@@ -92,7 +92,7 @@ log.info("검증 교정 {}건 {}", out.validationFixes().size(), out.validationF
 **프로젝트가 올라온 지금은 그래들로 돌립니다.**
 
 ```bash
-./gradlew build -x test
+./gradlew build -x test testClasses
 
 # Windows
 java -cp "build/classes/java/test;build/classes/java/main" com.youin.now.subtract.SubtractPipelineCheck
@@ -101,6 +101,10 @@ java -cp "build/classes/java/test:build/classes/java/main" com.youin.now.subtrac
 ```
 
 **「통과 31 · 실패 0」이 나와야 정상입니다.** 8/17 에 실제로 확인했습니다.
+
+> **`testClasses` 를 빼지 마십시오.** `-x test` 만 쓰면 Gradle 이 `compileTestJava` 까지 함께 건너뜁니다
+> (그 태스크를 요구하는 것이 `test` 뿐이라서입니다). 그러면 확인용 클래스가 컴파일되지 않거나
+> **낡은 클래스가 남아 엉뚱한 숫자가 나옵니다.** 8/18 에 실제로 30/1 이 나온 적이 있습니다.
 
 > **JUnit 으로 옮기지 마십시오 — 8/20 기능 동결 전까지는.**
 > 경로에 한글이 있는 PC 에서 `:test` 가 실패합니다(Gradle argfile 인코딩 문제).

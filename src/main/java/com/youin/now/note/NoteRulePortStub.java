@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 public class NoteRulePortStub implements NoteRulePort {
 
     @Override
-    public List<NoteRule> activeRules(Long userId) {
+    public List<NoteRule> activeRules(String userId) {
         return List.of();
     }
 }

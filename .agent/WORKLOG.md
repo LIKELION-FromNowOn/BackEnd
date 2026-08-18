@@ -17,6 +17,31 @@
 
 ---
 
+## 2026-08-18 11:50~14:30 · claude · auth · common/id
+
+- 한 것: 작업 트리에 들어와 있던 변경을 **검증하고 넷으로 나눠 커밋**했습니다
+  - A `fix` — `excludedBy` 를 `floor` → `medical` (명세서 `NOW-SUB-001` 과 일치)
+  - B `refactor` — 사용자 번호 `Long` → `String`. **반쪽만 돼 있던 것을 포트·문서 전체로 확대**
+  - C `feat` — 게스트 인증 `POST /auth/guest` · JWT(HS256, 라이브러리 없음) · 토큰 필터
+  - D `docs` — DB 스키마 22테이블 · 확인 명령 정정
+- 확인: **AuthTokenProviderCheck 17/0** · **SubtractPipelineCheck 31/0** · `Started NowApplication in 2.703s`
+  - 게스트 발급 2회 호출 — 토큰·`sub` 가 서로 다름. 헤더가 명세 예시 `eyJhbGciOiJIUzI1NiJ9` 와 일치
+  - 필터 등록 확인 — `authTokenFilter urls=[/*] order=1`
+- **고친 것 1건**: `AuthUser.createdAt` 에 `@ColumnDefault("now()")`.
+  `insertable=false` 만으로는 H2 `create-drop` DDL 에 기본값이 안 생겨
+  `POST /auth/guest` 가 **500**(`NULL not allowed for column "CREATED_AT"`)이었습니다.
+  실서버 스키마에는 `DEFAULT` 가 있어 안 드러나던 문제입니다
+- **막힌 것 · 미검증**
+  - `AuthTokenFilter` → 리졸버 **실제 주입 경로는 검증하지 못했습니다.** `@CurrentUser` 를 쓰는
+    엔드포인트가 아직 없습니다. **`REQUESTS.md` #5** 에 기록. 「검증됐다」고 착각하지 마십시오
+  - **팀이 MySQL 로 가기로 했습니다.** `schema_v63.sql` 은 아직 PostgreSQL 문법입니다.
+    다음 브랜치에서 8.0.16+ 로 전환합니다. **`REQUESTS.md` #6**
+- 브랜치: `feature/auth-swonseok` **push 만** 완료. `develop` 머지는 사람이
+  - **이름과 내용이 일부 어긋납니다** — A·B·D 는 auth 가 아닙니다.
+    동결까지 이틀이라 PR 을 늘리지 않는 쪽을 택했고, 커밋으로만 갈랐습니다
+
+---
+
 ## 2026-08-17 14:05~14:30 · claude · subtract
 
 - 한 것: 초기 반입분 **첫 빌드 확인**. Gradle 래퍼 생성(8.10.2 고정 유지) · `bootRun` 기동 확인 · 판정 엔진 동작 확인

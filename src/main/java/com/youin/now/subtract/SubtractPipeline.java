@@ -84,7 +84,7 @@ public final class SubtractPipeline {
             // ② floor = -1 — 판정 자체를 하지 않습니다
             if (it.floor() == SubtractFloor.EXCLUDED) {
                 drafts.add(new SubtractResult(it.itemId(), it.name(), SubtractVerdict.EXCLUDED,
-                        null, it.floor(), "floor", null, null, false, false, 0));
+                        null, it.floor(), "medical", null, null, false, false, 0));
                 continue;
             }
 

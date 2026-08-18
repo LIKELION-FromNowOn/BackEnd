@@ -1,6 +1,10 @@
 # 04 · 패키지 간 인터페이스 다섯 개
 
 **남의 `Repository` 를 직접 부르지 않습니다.** 아래 다섯 개만 씁니다.
+
+> **8/18 정정 — 사용자 번호는 `Long` 이 아니라 `String` 입니다.**
+> DB 규약이 「접두어 + ULID」(`us_01H8X…`)이고 `schema_v63.sql` 이 22테이블의 PK·FK 를 전부 `text` 로
+> 정의했습니다. `Long` 으로는 담을 수가 없습니다.
 **8/14 에 스텁으로 먼저 커밋합니다.** 구현이 없어도 각자 끝까지 갈 수 있습니다.
 
 | 인터페이스 | 만드는 사람 | 쓰는 사람 | 어디서 |
@@ -26,7 +30,7 @@ public interface SafetyPort {
 ```java
 // note/NoteRulePort.java — 송원석 제공
 public interface NoteRulePort {
-    List<NoteRule> activeRules(Long userId);
+    List<NoteRule> activeRules(String userId);
 
     record NoteRule(int sentenceNo, int daysPeriod, String name,
                     List<String> keywords, String itemId, int daysLeft) {}
@@ -36,12 +40,12 @@ public interface NoteRulePort {
 ```java
 // subtract/VerdictPort.java — 송원석 제공
 public interface VerdictPort {
-    Optional<VerdictSet> of(Long userId, LocalDate date);
-    Summary summary(Long userId, LocalDate date);      // 홈이 쓰는 얇은 것
+    Optional<VerdictSet> of(String userId, LocalDate date);
+    Summary summary(String userId, LocalDate date);      // 홈이 쓰는 얇은 것
 
     record VerdictSet(List<ItemVerdict> results) {}
     record ItemVerdict(String itemId, String verdict,
-                       String reason, String excludedBy) {}
+                       String reason, String excludedBy) {}   // excludedBy: medical | clinicNote | null
     record Summary(int keep, int simplify, int reduce,
                    int skip, int excluded) {}
 }
@@ -50,7 +54,7 @@ public interface VerdictPort {
 ```java
 // item/ItemPort.java — 이철희 제공
 public interface ItemPort {
-    List<SelectedItem> selected(Long userId);
+    List<SelectedItem> selected(String userId);
 
     record SelectedItem(String itemId, String frequency,
                         int floor, int evidenceLevel) {}
@@ -60,7 +64,7 @@ public interface ItemPort {
 ```java
 // checkin/CheckinPort.java — 이철희 제공
 public interface CheckinPort {
-    Optional<LatestCheckin> latest(Long userId);
+    Optional<LatestCheckin> latest(String userId);
 
     record LatestCheckin(String state, List<String> signalIds,
                          double signalStrength, LocalDateTime at) {}
@@ -84,7 +88,7 @@ public interface CheckinPort {
 | 덜어내기 요약 | `subtract/` |
 | 첫 발자국 카드 id | `footstep/` (id 만. 본문은 클라이언트 캐시) |
 
-각 패키지가 `xxxForHome(Long userId)` 를 하나씩 열고, `HomeService` 는 그것들을 모으기만 합니다.
+각 패키지가 `xxxForHome(String userId)` 를 하나씩 열고, `HomeService` 는 그것들을 모으기만 합니다.
 
 ## 설계로 없앤 호출 네 곳
 

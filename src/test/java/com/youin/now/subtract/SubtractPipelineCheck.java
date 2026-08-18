@@ -106,9 +106,9 @@ public final class SubtractPipelineCheck {
         SubtractPipeline.Outcome out =
                 SubtractPipeline.run(selected, SubtractCondition.NORMAL, cautions, null);
 
-        check("② floor=-1 은 excluded / excludedBy=floor",
+        check("② floor=-1 은 excluded / excludedBy=medical",
                 find(out.results(), "md_001").verdict() == SubtractVerdict.EXCLUDED
-                && "floor".equals(find(out.results(), "md_001").excludedBy()),
+                && "medical".equals(find(out.results(), "md_001").excludedBy()),
                 String.valueOf(find(out.results(), "md_001")));
 
         SubtractResult clinic = find(out.results(), "cr4");
