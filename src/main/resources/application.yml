@@ -30,21 +30,46 @@ app:
     valid-seconds: 2592000        # 30일. 게스트가 앱을 다시 열었을 때 이어지도록
 
 ---
-# local — DB 가 아직 없어도 서버가 뜨도록 메모리 DB 를 씁니다.
-# 이철희 님의 PostgreSQL 접속 정보가 나오면 application-local.yml 로 덮어쓰면 됩니다.
-# 그 파일이 있으면 아래 값보다 우선합니다.
+# local — 각자 PC 의 MySQL 을 씁니다. H2 는 2026-08-18 에 제거했습니다.
+#
+# ★ 실행 전에 세 가지가 준비돼 있어야 합니다
+#   1. 로컬에 MySQL 8.0.16 이상이 떠 있을 것
+#   2. fromnowon_db 를 만들고 docs/schema_v63.sql 을 적용해 두었을 것
+#   3. application-local.yml 에 접속 정보를 적어 두었을 것 (.gitignore 대상)
+#      → 없으면 application-local.yml.example 을 복사해서 쓰십시오
+#
+# ddl-auto 는 위쪽 공통 설정의 validate 를 그대로 씁니다.
+# 앱이 시작할 때 엔티티와 실제 테이블이 맞는지 대조합니다 —
+# 어긋나면 서버가 아니라 여기서 먼저 걸립니다. 그게 이 설정의 목적입니다.
 spring:
   config:
     activate:
       on-profile: local
   datasource:
-    url: jdbc:h2:mem:now;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  jpa:
-    hibernate:
-      ddl-auto: create-drop     # 메모리 DB 라 매번 새로 만듭니다
-  h2:
-    console:
-      enabled: true
+    # 접속 정보는 application-local.yml 에 적습니다. 여기에 적지 마십시오
+    url: ${DB_URL:jdbc:mysql://localhost:3306/fromnowon_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+
+---
+# prod — 실서버. ★ 값을 하나도 기본값으로 두지 않았습니다.
+#
+# 환경 변수가 빠지면 앱이 「조용히 잘못된 상태로 뜨는」 대신 곧바로 실패합니다.
+# 그게 의도입니다 — 기본값을 두면 DB 없이 뜨거나 공개된 서명 키로 도는 것을
+# 발표 직전까지 아무도 모릅니다.
+#
+# ★ 실행할 때 SPRING_PROFILES_ACTIVE=prod 를 반드시 지정하십시오.
+#   빠뜨리면 위쪽 profiles.default 에 따라 local 로 떠서 엉뚱한 DB 를 봅니다.
+#   기동 로그에 The following 1 profile is active: "prod" 가 찍히는지 확인하십시오.
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+app:
+  cors:
+    origins: ${CORS_ORIGINS}
+  jwt:
+    secret: ${APP_JWT_SECRET}
