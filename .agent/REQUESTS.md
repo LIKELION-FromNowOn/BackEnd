@@ -12,7 +12,9 @@
 | 3 | 송원석 | 프롬프트 4종 원문이 아직 없습니다. `today` · `item` 의 AI 호출부가 막힙니다 | 송원석 |
 | 4 | claude | **경로에 한글이 있는 Windows 에서 `./gradlew test` 가 실패합니다.** 코드 문제가 아니라 빌드 환경 문제라 판단이 필요합니다 (아래 상세) | 이철희 (`build.gradle` 소유) |
 | 5 | claude | **`AuthTokenFilter` → `CurrentUserArgumentResolver` 경로 미검증.** 필터 등록은 로그로 확인했으나(`authTokenFilter urls=[/*] order=1`), **요청 속성에 넣은 값을 리졸버가 실제로 꺼내는 것은 확인하지 못했습니다.** `@CurrentUser` 를 쓰는 엔드포인트가 아직 하나도 없어서입니다. **「검증됐다」고 착각하지 마십시오.** 판정 API 컨트롤러(`NOW-SUB-001~003`) 등 `@CurrentUser` 를 쓰는 첫 엔드포인트에서 확인 예정 | 송원석 |
-| 6 | claude | **배포 서버의 MySQL 버전 미확인.** 스키마를 **8.0.16+** 기준으로 작성했습니다. `CHECK` 23개가 **8.0.15 이하에서는 조용히 무시**되어 잘못된 값이 그대로 저장됩니다. 콜레이션은 구버전에서도 살도록 `utf8mb4_unicode_ci` 를 썼습니다. **적용 후 `SHOW CREATE TABLE` 로 `CHECK` 와 `FOREIGN KEY` 28개가 실제로 생겼는지 반드시 세어 보십시오** | 이철희 (배포) |
+| 6 | claude | **배포 서버의 MySQL 버전 미확인.** 스키마를 **8.0.16+** 기준으로 작성했습니다. `CHECK` 23개가 **8.0.15 이하에서는 조용히 무시**되어 잘못된 값이 그대로 저장됩니다. 콜레이션은 구버전에서도 살도록 `utf8mb4_unicode_ci` 를 썼습니다. **적용 후 확인 쿼리로 테이블 22 · 외래키 28 · CHECK 23 을 반드시 세어 보십시오** (파일 맨 끝) | 이철희 (배포) |
+| 7 | claude | **`users.email` 유니크 조건의 의미가 바뀌었습니다.** 원본은 `UNIQUE (email) WHERE deleted_at IS NULL`(살아 있는 회원끼리만 유일)인데 **MySQL 에 부분 유니크 인덱스가 없어** 그냥 `UNIQUE (email)` 로 갔습니다. **탈퇴한 회원의 이메일도 계속 막습니다.** 지금은 탈퇴 API 가 없어 드러나지 않지만, 생기면 탈퇴 시 `email` 을 비우거나 별도 컬럼으로 옮겨야 합니다. **제가 정할 사안이 아니라 그대로 두고 올립니다** | 송원석 |
+| 8 | claude | **H2 를 제거하고 로컬도 MySQL 을 쓰도록 바꿨습니다(8/18).** 이제 `ddl-auto: validate` 가 엔티티와 실제 테이블을 대조하므로 **스키마 불일치가 서버가 아니라 로컬에서 걸립니다.** 대신 **각자 PC 에 MySQL 8.0.16+ 와 `fromnowon_db` 가 있어야 `bootRun` 이 됩니다.** 절차는 `application-local.yml.example` 머리말 참고 | 전원 (각자 로컬) |
 
 ### #4 상세 — Gradle 워커 argfile 인코딩
 
