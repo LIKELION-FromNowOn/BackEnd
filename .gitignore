@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# 로컬 설정 — 각자 값이 다릅니다. 절대 커밋하지 마십시오
+src/main/resources/application-local.yml
+src/main/resources/application-secret.yml
+.env
+*.local
+
+# 로그
+*.log
+logs/
+
+# 에이전트 임시
+.claude/settings.local.json
+.codex/

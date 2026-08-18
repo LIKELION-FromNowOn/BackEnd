@@ -1,0 +1,42 @@
+// 지금부터 (now) — 백엔드
+// 팀 할래 말래 (You in) · 멋쟁이사자처럼 14기 중앙 해커톤
+//
+// 의존성을 여기서만 관리합니다. 각자 추가하지 말고 슬랙 backend 에 먼저 올려 주십시오.
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.5'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.youin'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+configurations {
+    compileOnly { extendsFrom annotationProcessor }
+}
+
+repositories { mavenCentral() }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    runtimeOnly 'org.postgresql:postgresql'
+    // DB 가 아직 없어도 ./gradlew bootRun 이 뜨게 하는 임시 장치입니다.
+    // 이철희 님의 PostgreSQL 접속 정보가 나오면 local 프로파일만 바꾸면 됩니다. 이 줄은 그대로 둬도 됩니다
+    runtimeOnly 'com.h2database:h2'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') { useJUnitPlatform() }
