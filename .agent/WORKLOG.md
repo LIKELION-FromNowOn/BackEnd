@@ -17,6 +17,39 @@
 
 ---
 
+## 2026-08-18 15:00~17:45 · claude · DB (MySQL 전환)
+
+- 한 것: **PostgreSQL → MySQL 8.0.16+ 전환**. 팀이 다룰 수 있는 DB 를 쓰기로 한 결정에 따른 것입니다
+  - `schema_v63.sql` 전면 재작성 — 22테이블 · **외래키 28** · **CHECK 23**
+  - `build.gradle` 드라이버 교체 · **H2 제거**
+  - `application.yml` — `local` 을 MySQL 로, **`prod` 프로파일 신설**
+  - DB 이름 **`fromnowon_db`**
+- **옮기면서 걸린 것 다섯 — 그대로 옮겼으면 조용히 깨졌을 것들**
+  - **인라인 `REFERENCES` 28곳** → 테이블 레벨 `FOREIGN KEY`.
+    MySQL 은 컬럼 레벨 `REFERENCES` 를 **문법만 받고 무시**합니다. 오류 없이 외래키만 사라집니다
+  - **부분 인덱스 2곳**(1개인 줄 알았으나 `UNIQUE` 가 하나 더 있었습니다). MySQL 에 없는 기능이라 `WHERE` 제거.
+    **`ux_users_email` 은 의미가 바뀝니다** — `REQUESTS #7`
+  - **`rank`** 는 MySQL 8.0 예약어(윈도 함수) → 백틱
+  - **`text`** 컬럼명 2곳 → 백틱
+  - `timestamptz`→`DATETIME(6)` · `jsonb`→`JSON` · `text`→`VARCHAR`
+- **H2 를 없앤 이유** — 흉내내는 DB 로 검증하면 실서버에서 처음 터집니다.
+  이제 `ddl-auto: validate` 가 **엔티티와 실제 테이블을 로컬에서 대조**합니다
+- 확인 (**로컬 MySQL 8.0.45 에 실제로 올려서**)
+  - 스키마 적용 → **테이블 22 · 외래키 28 · CHECK 23**
+  - **`validate` 통과** — `AuthUser` ↔ `users` 일치. 걱정하던 `OffsetDateTime` ↔ `DATETIME(6)` 도 맞았습니다
+  - `Started NowApplication in 2.925s` · `POST /auth/guest` **200** ×3
+  - SQL 로그에 `insert into users` 확인 · **`users` 3행 실제 확인**
+- **막힌 것 · 남은 것**
+  - `REQUESTS #6` 배포 서버 MySQL 버전 미확인. **8.0.16 미만이면 `CHECK` 23개가 조용히 무시됩니다**
+  - `REQUESTS #7` `users.email` 유니크 의미 변경 — 탈퇴 API 가 생기면 손봐야 합니다
+  - **노션 「DB 설계서」가 아직 PostgreSQL 기준**입니다. 사람이 갱신해야 합니다
+- 브랜치: `feature/db-mysql-swonseok` **push 만** 완료. `develop` 머지는 사람이
+- **참고** — Workbench 가 `autocommit=0` · `REPEATABLE READ` 면 앱이 넣은 행이 안 보입니다.
+  트랜잭션 스냅숏에 갇힌 것이라 `ROLLBACK;` 하거나 `Query → Auto-Commit Transactions` 를 켜십시오.
+  8/18 에 여기서 30분 헤맸습니다
+
+---
+
 ## 2026-08-18 11:50~14:30 · claude · auth · common/id
 
 - 한 것: 작업 트리에 들어와 있던 변경을 **검증하고 넷으로 나눠 커밋**했습니다
