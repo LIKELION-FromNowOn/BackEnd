@@ -14,7 +14,7 @@
 
 > **판정 대상에서 제외된 항목.** `floor: -1` 이거나 클리닉 안내문 주의사항에 걸린 항목입니다.
 > **화면에서 숨기지 않습니다.** 「건드리지 않은 것」 영역에 사유와 함께 표시하고, **되돌리기 버튼은 띄우지 않습니다.**
-> 사유는 `excludedBy` 로 구분 — `floor`(의료 영역) / `clinicNote`(안내문 제한, `noteSent` · `daysLeft` 동봉)
+> 사유는 `excludedBy` 로 구분 — `medical`(의료 영역) / `clinicNote`(안내문 제한, `noteSent` · `daysLeft` 동봉)
 
 ### 되돌리기 가능 여부
 
