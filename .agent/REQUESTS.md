@@ -11,6 +11,8 @@
 | 2 | 송원석 | `daily_logs` 테이블을 만들지, `actions.completed_at` 파생으로 갈지 | 이철희 |
 | 3 | 송원석 | 프롬프트 4종 원문이 아직 없습니다. `today` · `item` 의 AI 호출부가 막힙니다 | 송원석 |
 | 4 | claude | **경로에 한글이 있는 Windows 에서 `./gradlew test` 가 실패합니다.** 코드 문제가 아니라 빌드 환경 문제라 판단이 필요합니다 (아래 상세) | 이철희 (`build.gradle` 소유) |
+| 5 | claude | **`AuthTokenFilter` → `CurrentUserArgumentResolver` 경로 미검증.** 필터 등록은 로그로 확인했으나(`authTokenFilter urls=[/*] order=1`), **요청 속성에 넣은 값을 리졸버가 실제로 꺼내는 것은 확인하지 못했습니다.** `@CurrentUser` 를 쓰는 엔드포인트가 아직 하나도 없어서입니다. **「검증됐다」고 착각하지 마십시오.** 판정 API 컨트롤러(`NOW-SUB-001~003`) 등 `@CurrentUser` 를 쓰는 첫 엔드포인트에서 확인 예정 | 송원석 |
+| 6 | claude | **배포 서버의 MySQL 버전 미확인.** 스키마를 **8.0.16+** 기준으로 작성했습니다. `CHECK` 23개가 **8.0.15 이하에서는 조용히 무시**되어 잘못된 값이 그대로 저장됩니다. 콜레이션은 구버전에서도 살도록 `utf8mb4_unicode_ci` 를 썼습니다. **적용 후 `SHOW CREATE TABLE` 로 `CHECK` 와 `FOREIGN KEY` 28개가 실제로 생겼는지 반드시 세어 보십시오** | 이철희 (배포) |
 
 ### #4 상세 — Gradle 워커 argfile 인코딩
 
