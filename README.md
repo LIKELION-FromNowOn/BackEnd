@@ -11,7 +11,7 @@
 | **Java** | **21** (고정) |
 | Gradle | 8.10.2 — `./gradlew` 를 쓰면 자동 |
 | Spring Boot | 3.3.5 |
-| DB | PostgreSQL. **로컬은 DB 없이도 뜹니다** (H2 메모리) |
+| DB | **MySQL 8.0.16+** (`fromnowon_db`). **로컬에도 MySQL 이 있어야 합니다** — H2 제거됨 |
 
 ```bash
 java -version          # 21 이 아니면 빌드가 안 됩니다

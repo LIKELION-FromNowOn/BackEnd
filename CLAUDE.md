@@ -23,7 +23,7 @@
 ```bash
 java -version            # 21 이어야 합니다. 아니면 빌드가 안 됩니다
 ./gradlew build          # 빌드 + 테스트
-./gradlew bootRun        # 실행 — DB 없이도 뜹니다 (local 프로파일 · H2 메모리)
+./gradlew bootRun        # 실행 — 로컬 MySQL 이 떠 있어야 합니다 (H2 제거됨)
 ./gradlew test           # 테스트만
 ```
 

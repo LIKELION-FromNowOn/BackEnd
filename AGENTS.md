@@ -14,7 +14,7 @@
 | | |
 |---|---|
 | **무엇을 만드나** | 관리 루틴에서 **오늘 하지 않아도 되는 것을 덜어내 주는** 앱의 백엔드 |
-| **스택** | **Java 21** · **Spring Boot 3.3.5** · PostgreSQL · JPA · **Gradle 8.10.2** |
+| **스택** | **Java 21** · **Spring Boot 3.3.5** · **MySQL 8.0.16+** · JPA · **Gradle 8.10.2** |
 | **구조** | 단일 모듈 + **기능(도메인)별 패키지 14개** |
 | **마감** | **8/20 자정 기능 동결** · **8/21 10:00 제출** (이후 어떤 사정으로도 불가) |
 | **사람** | 백엔드 3명(송원석·김민정·이철희) · 프론트 1명(황인서) · 디자인 1명(김지현) |
@@ -28,7 +28,8 @@
 | Spring Boot | 3.3.5 | `build.gradle` |
 | 의존성 관리 플러그인 | 1.1.6 | `build.gradle` |
 | Gradle | 8.10.2 | `gradle/wrapper/gradle-wrapper.properties` |
-| DB | PostgreSQL (로컬은 H2 메모리) | `src/main/resources/application.yml` |
+| DB | **MySQL 8.0.16+** (로컬도 MySQL. **H2 제거됨**) | `src/main/resources/application.yml` · `docs/schema_v63.sql` |
+| DB 이름 | **`fromnowon_db`** — 리눅스는 대소문자를 구분하니 소문자 그대로 | `application-local.yml` |
 | 패키지 루트 | `com.youin.now` | |
 | API 기본 경로 | `/api/v1` | `application.yml` 의 `context-path` |
 
