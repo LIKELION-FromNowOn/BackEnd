@@ -10,7 +10,7 @@
   - Claude 가 썼다는 것은 `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>` 트레일러로 남깁니다
 - 작업 브랜치는 **`feature/<패키지>-<작업자 아이디>`** 입니다 — 예 `feature/subtract-swonseok`
   - **아이디는 사람 것입니다.** `claude` 를 붙이지 마십시오 (`feature/subtract-claude` 아님)
-  - **한 사람당 `feature/*` 는 최대 3개.** 네 번째가 필요하면 하나를 머지하고 지운 뒤 여십시오
+  - 개수 제한은 없습니다. 다만 **머지가 끝난 브랜치는 지우십시오** — 목록이 길어지면 무엇이 살아 있는지 알 수 없게 됩니다
   - 이름이 에이전트를 구분하지 않으니 **`.agent/CLAIMS.md` 선점이 유일한 충돌 방지 장치**입니다. 건너뛰지 마십시오
 - **`git push --force` · `--force-with-lease` · `rebase` · `filter-branch` 를 쓰지 않습니다. 예외 없습니다**
   - 이미 push 한 커밋은 메시지가 틀렸어도 **고치지 않습니다.** 다음 커밋부터 맞춥니다
