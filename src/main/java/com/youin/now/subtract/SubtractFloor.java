@@ -39,4 +39,15 @@ public enum SubtractFloor {
         for (SubtractFloor f : values()) if (f.code.equals(code)) return f;
         throw new IllegalArgumentException("알 수 없는 floor: " + code);
     }
+
+    /**
+     * 숫자 표현으로 찾습니다. <b>{@code ItemPort} 가 숫자로 넘겨 줍니다.</b>
+     *
+     * <p>이 enum 이 두 표현을 묶는 자리이므로 변환도 여기서 합니다.
+     * 부르는 쪽마다 {@code switch} 를 쓰면 그것이 갈라집니다.
+     */
+    public static SubtractFloor ofLevel(int level) {
+        for (SubtractFloor f : values()) if (f.level == level) return f;
+        throw new IllegalArgumentException("알 수 없는 floor 등급: " + level);
+    }
 }
