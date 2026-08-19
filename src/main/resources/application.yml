@@ -37,9 +37,15 @@ app:
     #   DB 접속 정보와 달리 「없으면 실패」로 두지 않는 이유가 이것입니다.
     api-key: ${FROMNOWON_OPENAI_API_KEY:}
     model:   ${FROMNOWON_OPENAI_MODEL:gpt-5.6-luna}
-    # 호출 규약은 docs/prompts/00-index.md 와 같습니다 — 타임아웃 6초 · 재시도 1회
-    timeout-seconds: 6
-    max-retries: 1
+    # 호출 규약은 docs/prompts/00-index.md 와 같습니다.
+    # 2026-08-20 실측으로 6초 -> 10초, 재시도 1회 -> 0회로 바꿨습니다.
+    #   실측에서 세 추론 단계 모두 6초를 넘었고(6.06~6.45초 평균),
+    #   타임아웃만 늘리면 재시도 때문에 최악이 20초가 되어 재시도를 뺐습니다.
+    #   최악 대기가 12초에서 10초로 오히려 짧아집니다.
+    timeout-seconds: 10
+    max-retries: 0
+    # 대가가 0.39초뿐이고 편차가 가장 작았습니다. 자리마다 다르게 줄 수 있습니다.
+    reasoning-effort: low
 
 ---
 # local — 각자 PC 의 MySQL 을 씁니다. H2 는 2026-08-18 에 제거했습니다.
