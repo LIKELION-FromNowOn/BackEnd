@@ -138,8 +138,12 @@ CREATE TABLE care_items (                                         -- 32행
     name                VARCHAR(255) NOT NULL,
     floor               VARCHAR(20)  NOT NULL,
     evidence_level      VARCHAR(20)  NOT NULL,
-    core                SMALLINT     NOT NULL,                    -- 중요도. 점수식 입력
-    base                SMALLINT     NOT NULL,                    -- 기본 부담. 점수식 입력
+    -- 2026-08-20 SMALLINT -> DECIMAL(3,1). 마스터 시드에 소수가 9건 있습니다
+    -- (core 2.5 2건 · base 0.8 1.2 1.4 1.6 2.2 2.5 3.5 각 1건).
+    -- 반올림되면 load 가 어긋나 임계값 0.8 · -2.5 에서 판정이 뒤집힙니다.
+    -- FLOAT/DOUBLE 은 쓰지 않습니다 — 점수식에 오차가 두 번 들어갑니다.
+    core                DECIMAL(3,1) NOT NULL,                    -- 중요도. 점수식 입력
+    base                DECIMAL(3,1) NOT NULL,                    -- 기본 부담. 점수식 입력
     minutes             SMALLINT     NOT NULL,                    -- 고정 소요 시간(분)
     frequency_editable  BOOLEAN      NOT NULL,                    -- false 면 빈도 UI 를 띄우지 않습니다
     default_frequency   VARCHAR(20)  NULL,
