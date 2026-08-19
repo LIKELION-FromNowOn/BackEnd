@@ -76,8 +76,19 @@ SELECT CONCAT('시술일      : ', DATE_FORMAT(@received, '%Y-%m-%d'),
 --  1. 다시 넣기 전에 지웁니다 (여러 번 실행해도 안전)
 -- ────────────────────────────────────────────────────────────────────────────
 
-DELETE FROM care_notes WHERE id = @note_id;
--- care_note_lines · care_note_rules 는 ON DELETE CASCADE 로 함께 지워집니다
+-- ★ 순서가 중요합니다. rules 를 먼저 지우십시오.
+--
+--   care_note_rules 에는 안내문 계통 외래키가 둘인데 하나만 CASCADE 입니다.
+--     fk_care_note_rules_note  → care_notes(id)                ON DELETE CASCADE
+--     fk_care_note_rules_line  → care_note_lines(id, sent_no)  ← CASCADE 없음
+--
+--   그래서 care_notes 를 먼저 지우면 lines 로 번지는데,
+--   그 lines 를 rules 가 붙잡아 「Cannot delete or update a parent row」 로 실패합니다.
+--   (2026-08-20 실측. REQUESTS #19 로 올려 두었습니다)
+
+DELETE FROM care_note_rules WHERE care_note_id = @note_id;
+DELETE FROM care_notes      WHERE id           = @note_id;
+-- care_note_lines 는 care_notes 삭제 시 CASCADE 로 함께 지워집니다
 
 
 -- ────────────────────────────────────────────────────────────────────────────
