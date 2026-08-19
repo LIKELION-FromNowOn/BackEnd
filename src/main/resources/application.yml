@@ -28,6 +28,18 @@ app:
     #   32바이트 미만이면 앱이 시작할 때 막습니다
     secret: ${APP_JWT_SECRET:로컬전용_기본_서명키_실서버에서는_반드시_환경변수로_덮으십시오}
     valid-seconds: 2592000        # 30일. 게스트가 앱을 다시 열었을 때 이어지도록
+  llm:
+    # 2026-08-20 OpenAI 크레딧을 쓰기로 했습니다.
+    #
+    # ★ 키가 비어 있어도 앱은 정상적으로 뜹니다. 이건 의도입니다 —
+    #   호출이 실패하면 폴백 문장으로 채우게 되어 있어서, 키가 없으면
+    #   그냥 처음부터 폴백으로 갑니다. generatedBy 에 fallback 이 남습니다.
+    #   DB 접속 정보와 달리 「없으면 실패」로 두지 않는 이유가 이것입니다.
+    api-key: ${FROMNOWON_OPENAI_API_KEY:}
+    model:   ${FROMNOWON_OPENAI_MODEL:gpt-5.6-luna}
+    # 호출 규약은 docs/prompts/00-index.md 와 같습니다 — 타임아웃 6초 · 재시도 1회
+    timeout-seconds: 6
+    max-retries: 1
 
 ---
 # local — 각자 PC 의 MySQL 을 씁니다. H2 는 2026-08-18 에 제거했습니다.
