@@ -3,6 +3,7 @@ package com.youin.now.common.error;
 import com.youin.now.common.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -50,6 +51,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.NOT_FOUND.status())
                 .body(ApiResponse.fail(ErrorCode.NOT_FOUND.name(),
                         ErrorCode.NOT_FOUND.defaultMessage()));
+    }
+
+    /**
+     * 본문을 읽을 수 없는 경우 — 깨진 JSON · 잘못된 문자 인코딩 · 타입 불일치.
+     *
+     * <p>이것도 이전에는 500 이었습니다. <b>보낸 쪽 잘못인데 서버 장애로 보였습니다.</b>
+     *
+     * <p>2026-08-20 에 상태 API 를 시험하다 발견했습니다. 콘솔이 한글을 MS949 로 보내
+     * {@code Invalid UTF-8 middle byte} 가 났는데 응답이 {@code 500 INTERNAL_ERROR} 였습니다.
+     * <b>프론트가 인코딩 문제를 서버 장애로 오인합니다.</b>
+     *
+     * <p><b>원인 메시지를 사용자에게 보여 주지 않습니다.</b> 내부 구조가 드러납니다.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handle(HttpMessageNotReadableException e) {
+        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.status())
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_FAILED.name(),
+                        "요청 본문을 읽을 수 없습니다. JSON 형식과 UTF-8 인코딩을 확인해 주십시오"));
     }
 
     /** 경로는 맞고 메서드가 틀린 경우. 이것도 이전에는 500 이었습니다. */
