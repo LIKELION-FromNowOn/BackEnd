@@ -15,6 +15,8 @@ public enum ErrorCode {
     UNAUTHORIZED     (HttpStatus.UNAUTHORIZED,       "토큰이 없거나 만료되었습니다"),
     FORBIDDEN        (HttpStatus.FORBIDDEN,          "본인의 자원이 아닙니다"),
     NOT_FOUND        (HttpStatus.NOT_FOUND,          "찾을 수 없습니다"),
+    /** 경로는 맞고 메서드가 틀린 경우. <b>2026-08-20 신설 — 그전에는 500 으로 나갔습니다.</b> */
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "허용되지 않은 방식입니다"),
     RATE_LIMITED     (HttpStatus.TOO_MANY_REQUESTS,  "호출 한도를 초과했습니다"),
     INTERNAL_ERROR   (HttpStatus.INTERNAL_SERVER_ERROR, "잠시 후 다시 시도해 주십시오"),
 
@@ -24,6 +26,11 @@ public enum ErrorCode {
     FREQUENCY_REQUIRED(HttpStatus.BAD_REQUEST, "선택한 항목의 빈도를 골라 주십시오"),
 
     // 덜어내기
+    /**
+     * 오늘 상태 체크 전에 판정을 요청한 경우. 메시지는 명세서 {@code NOW-SUB-001} 실패 코드 표와 글자까지 같습니다.
+     * <b>2026-08-20 신설 — 명세서에는 있었고 코드에만 없었습니다.</b>
+     */
+    NO_CHECKIN               (HttpStatus.CONFLICT,  "상태 체크를 먼저 진행해 주세요"),
     EVALUATION_NOT_FOUND     (HttpStatus.NOT_FOUND, "판정 결과를 찾을 수 없습니다"),
     ALREADY_REVERTED         (HttpStatus.CONFLICT,  "이미 되돌린 항목입니다"),
     /** 클리닉 안내로 제외된 항목은 되돌릴 수 없습니다. <b>앱이 클리닉 안내를 덮어쓰면 안 됩니다.</b> */

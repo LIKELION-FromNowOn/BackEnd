@@ -165,30 +165,42 @@ org.hibernate.DuplicateMappingException: Duplicate entity mapping User
 
 ## 5. 브랜치와 커밋
 
+> **이 장이 규칙의 단일 원본입니다. `CLAUDE.md` 와 어긋나면 이 장이 맞습니다.**
+> **규칙을 바꾸면 두 파일을 같은 커밋에서 함께 고칩니다.** 한쪽만 고치면 반드시 갈라집니다.
+>
+> **6장의 에이전트 이름 표기는 선점 규약용입니다. 브랜치·커밋 이름에는 쓰지 않습니다.**
+
 **`main` · `develop` · `feature/*` 세 단계입니다. `master` 는 쓰지 않습니다.**
 
 | 브랜치 | 무엇 | 누가 머지 |
 |---|---|---|
 | `main` | 배포되는 것만 — 8/16 · 8/20 · 8/21 세 번 | 이철희 |
 | `develop` | 통합. **항상 빌드가 통과해야 합니다** | 전원 |
-| `feature/<패키지>-<에이전트>` | 작업 단위 | 소유자 |
+| `feature/<패키지>-<작업자 아이디>` | 작업 단위 | 소유자 |
 
-에이전트가 만드는 브랜치는 **패키지 이름 + 에이전트 이름**입니다.
+브랜치 이름은 **패키지 이름 + 작업자 아이디**입니다.
 
 ```
-feature/today-claude      feature/today-codex
-feature/subtract-claude   feature/subtract-codex
+feature/today-minjeong      feature/subtract-swonseok
+feature/item-chulhee        feature/master-minjeong
 ```
 
+**아이디는 사람 것입니다. 에이전트 이름(`claude` · `codex`)을 쓰지 않습니다.**
 **같은 브랜치에 두 에이전트가 커밋하지 않습니다.**
 
-커밋 메시지는 **접두어로 누가 했는지 남깁니다.**
+**개수 제한은 없습니다.** 다만 **머지가 끝난 브랜치는 지우십시오** — 목록이 길어지면 무엇이 살아 있는지 알 수 없게 됩니다.
+(2026-08-19 「사람당 최대 3개」 폐지 · 송원석 지시)
+
+커밋 메시지는 **접두어로 누구 작업인지 남깁니다.**
 
 ```
-[claude] feat(today): GET /today 추천 조회 구현
-[codex]  fix(item): PUT /me/items 최소 3개 검증 추가
-[human]  chore: gradle 의존성 추가
+[swonseok] feat(subtract): 판정 결과 저장 구현
+[minjeong] fix(today): 최소 3개 검증 추가
+[chulhee]  chore: gradle 의존성 추가
 ```
+
+**접두어는 「누가 타이핑했나」가 아니라 「누구 작업인가」입니다.**
+에이전트가 대신 쓴 것은 `Co-Authored-By` 트레일러로 남깁니다.
 
 ### 하지 말 것
 
@@ -197,7 +209,7 @@ feature/subtract-claude   feature/subtract-codex
 | 1 | `main` 에 직접 push | 배포본이 깨집니다 |
 | 2 | `feature/*` 끼리 머지 | 이력이 엉킵니다. **반드시 `develop` 을 거칩니다** |
 | 3 | `develop` 빌드를 깬 채로 종료 | 다음 사람이 멈춥니다 |
-| 4 | `git push --force` | 남의 커밋이 사라집니다 |
+| 4 | **`git push --force` · `--force-with-lease` · `rebase` · `filter-branch` — 이력 재작성 전부** | **남의 커밋이 사라집니다. 예외 없습니다.** 되돌릴 것이 있으면 `git revert` 로 새 커밋을 쌓습니다 |
 | 5 | 남의 `feature/*` 에 커밋 | 소유자 규칙과 같습니다 |
 
 ---
