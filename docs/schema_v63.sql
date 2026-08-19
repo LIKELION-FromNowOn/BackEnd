@@ -519,8 +519,11 @@ CREATE TABLE safety_checks (
     PRIMARY KEY (id),
     KEY ix_safety_checks_created (created_at DESC),
     CONSTRAINT fk_safety_checks_user FOREIGN KEY (user_id) REFERENCES users (id),
+    -- 2026-08-20 todo 제거. NOW-SAFE-001 의 사전 필터 경로가 다섯 곳이고
+    -- 코드 열거형(ITEM_CUSTOM SIGNAL_CUSTOM COACH NOTE PLAN)과 1:1 로 맞습니다.
+    -- 오늘의 행동에는 자유 입력이 없어 todo 에 대응하는 화면도 API 도 없습니다.
     CONSTRAINT ck_safety_checks_source
-        CHECK (source IN ('custom_item', 'custom_signal', 'todo', 'coach', 'care_note', 'plan'))
+        CHECK (source IN ('custom_item', 'custom_signal', 'coach', 'care_note', 'plan'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ★ 원문을 남기지 않습니다. 위기 신호가 담긴 문장을 그대로 보관하면
