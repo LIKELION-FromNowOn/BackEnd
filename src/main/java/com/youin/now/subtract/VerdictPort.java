@@ -37,6 +37,33 @@ public interface VerdictPort {
     Summary summary(String userId, LocalDate date);
 
     /**
+     * 기록 요약 전용. <b>{@code NOW-LOG-002} 의 {@code daysSubtracted} · {@code topSubtracted} 입니다.</b>
+     *
+     * <p>{@code evaluations} · {@code evaluation_results} 는 {@code subtract/} 소유라
+     * {@code log/} 에서 직접 읽지 않습니다 — {@code docs/04-ports.md} 「남의 {@code Repository} 를
+     * 직접 부르지 않습니다」.
+     *
+     * <p><b>이름은 안 담습니다.</b> {@code care_items.name} 은 {@code master/} 소유이고
+     * 김민정 님 것이라, {@code itemId} 만 드리면 그쪽에서 붙이는 편이 경계가 깨끗합니다.
+     *
+     * <p>기간을 안 주면 전부입니다. 없으면 <b>0 과 빈 목록</b>입니다 (null 아님).
+     *
+     * @param from 이 날부터 (KST, 포함). {@code null} 이면 처음부터
+     * @param to   이 날까지 (KST, 포함). {@code null} 이면 오늘까지
+     */
+    Stats stats(String userId, LocalDate from, LocalDate to);
+
+    /**
+     * @param daysSubtracted <b>덜어내기를 한 날 수.</b> 판정 횟수가 아니라 날짜 수입니다 —
+     *                       같은 날 두 번 판정해도 하루입니다
+     * @param topSubtracted  자주 덜어낸 항목. <b>많은 것부터</b>. {@code keep} 과 {@code excluded} 는 셈에서 뺍니다
+     */
+    record Stats(int daysSubtracted, List<TopItem> topSubtracted) {}
+
+    /** @param itemId 마스터 항목 id({@code cr4}). 직접 입력 항목이면 {@code user_items.id} 입니다 */
+    record TopItem(String itemId, int count) {}
+
+    /**
      * @param evaluationId <b>2026-08-20 추가.</b> {@code actions.evaluation_id} 가 {@code NOT NULL}
      *                     외래키라 {@code today/} 가 「오늘의 행동」을 저장할 때 반드시 필요합니다
      */

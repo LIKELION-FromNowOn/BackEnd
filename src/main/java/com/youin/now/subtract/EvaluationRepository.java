@@ -28,6 +28,20 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, String> 
                                  @Param("from") java.time.OffsetDateTime from,
                                  @Param("to") java.time.OffsetDateTime to);
 
+    /**
+     * 덜어내기를 한 <b>날 수</b>. 판정 횟수가 아닙니다 — 같은 날 두 번 판정해도 하루입니다.
+     */
+    @Query(value = """
+            select count(distinct date(created_at))
+              from evaluations
+             where user_id = :userId
+               and (:from is null or created_at >= :from)
+               and (:to   is null or created_at <  :to)
+            """, nativeQuery = true)
+    int countSubtractedDays(@Param("userId") String userId,
+                            @Param("from") java.time.OffsetDateTime from,
+                            @Param("to") java.time.OffsetDateTime to);
+
     /** 홈 전용 — 그날 판정. {@code created_at} 이 {@code DATETIME} 이라 날짜로 자릅니다 */
     @Query("select e from Evaluation e where e.userId = :userId "
          + "and e.createdAt >= :from and e.createdAt < :to "
