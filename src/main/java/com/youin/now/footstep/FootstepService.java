@@ -82,8 +82,11 @@ public class FootstepService {
      * {@code docs/04-ports.md} 의 「id 만」은 낡았고 명세가 앞섭니다.
      *
      * <p><b>오늘의 케어와 같은 카테고리를 우선합니다</b> ({@code NOW-HOME-001} 처리 규칙 2).
-     * 「우선해」이므로 같은 것이 없으면 폴백입니다 — {@code care} 와 {@code med} 는
-     * 사례가 아예 없어 항상 폴백을 탑니다.
+     * <b>전체 8건에서 찾습니다</b> — 명세에 「온보딩 중에서」라는 말이 없고,
+     * 온보딩으로 먼저 좁히면 {@code eat}({@code fs_103})처럼 온보딩이 아닌 사례를 놓칩니다.
+     *
+     * <p>같은 카테고리가 없으면 온보딩 첫 번째로 폴백합니다.
+     * {@code care} 는 사례가 아예 없어 항상 폴백을 탑니다.
      *
      * <p><b>추천 중단 상태에서는 홈이 이것을 부르지 않습니다.</b>
      * 아무것도 안 해도 되는 날에 남의 사례를 보여 주면 부담이 됩니다.
@@ -95,16 +98,17 @@ public class FootstepService {
         List<FootstepEntity> all = footsteps.findAllByOrderByIdAsc();
         if (all.isEmpty()) return null;
 
-        // 온보딩 것 중에서 고릅니다. 온보딩이 하나도 없으면 전체에서
+        // 폴백용. 온보딩이 하나도 없으면 전체에서 고릅니다
         List<FootstepEntity> onboarding = all.stream()
                 .filter(e -> Boolean.TRUE.equals(e.getIsOnboarding()))
                 .toList();
         List<FootstepEntity> pool = onboarding.isEmpty() ? all : onboarding;
 
-        FootstepEntity picked = pool.stream()
+        // ★ 전체에서 카테고리를 먼저 찾습니다. 없으면 온보딩 첫 번째
+        FootstepEntity picked = all.stream()
                 .filter(e -> e.getCategoryId().equals(preferCategoryId))
                 .findFirst()
-                .orElse(pool.get(0));       // 같은 카테고리가 없으면 첫 번째
+                .orElseGet(() -> pool.get(0));
 
         return new ForHome(picked.getId(), picked.getCategoryId(),
                 picked.getSituation(), picked.getFirstStep());
