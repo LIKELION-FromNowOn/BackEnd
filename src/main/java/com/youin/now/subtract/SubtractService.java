@@ -21,8 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
  * 순수 계산만 하므로 <b>확인 31건이 DB 없이 돕니다.</b> 그 성질을 깨지 않으려고
  * 저장을 여기로 뺐습니다.
  *
- * <p><b>2026-08-20 현재 LLM 을 붙이지 않았습니다.</b> {@code generator} 에 {@code null} 을
- * 넘기면 파이프라인이 폴백 문장을 씁니다. {@code generatedBy} 가 {@code fallback} 으로 남고,
+ * <p><b>2026-08-20 LLM 을 붙였습니다.</b> ⑥단계에서 {@link SubtractReasonGenerator} 가
+ * 근거 문장을 만듭니다. <b>판정은 그 전에 코드가 이미 끝냈고</b> LLM 은 문장만 씁니다.
+ * 실패하면 폴백 문장이고 {@code generatedBy} 가 {@code fallback} 으로 남습니다 —
  * 발표에서 그 필드로 「AI 가 실제로 돌았는지」를 구분합니다.
  */
 @Service
@@ -39,6 +40,7 @@ public class SubtractService {
     /** 명세서가 응답에 쓰는 ISO 8601. {@code 2026-08-20T09:12:00+09:00} 모양입니다. */
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
+    private final SubtractReasonGenerator reasons;
     private final CheckinPort checkins;
     private final ItemPort items;
     private final NoteRulePort noteRules;
@@ -46,7 +48,9 @@ public class SubtractService {
     private final EvaluationResultRepository results;
 
     public SubtractService(CheckinPort checkins, ItemPort items, NoteRulePort noteRules,
-                           EvaluationRepository evaluations, EvaluationResultRepository results) {
+                           EvaluationRepository evaluations, EvaluationResultRepository results,
+                           SubtractReasonGenerator reasons) {
+        this.reasons = reasons;
         this.checkins = checkins;
         this.items = items;
         this.noteRules = noteRules;
@@ -106,9 +110,18 @@ public class SubtractService {
             }
         }
 
-        // ②④⑤⑥⑦ — generator 가 null 이면 전부 폴백 문장입니다
-        SubtractPipeline.Outcome outcome =
-                SubtractPipeline.run(selected, condition, cautions, null);
+        // ②④⑤⑥⑦ — ⑥에서 근거 문장을 만듭니다.
+        //
+        // 생성기를 여기서 람다로 묶는 이유 — 프롬프트가 category · frequency · load 를
+        // 요구하는데 그 값들은 SubtractItem 에만 있고 파이프라인이 넘기는 draft 에는 없습니다.
+        // 인터페이스를 바꾸는 대신 selected 를 클로저로 들고 갑니다.
+        // 엔진(800판정 검증)을 안 건드리는 것이 목적입니다.
+        //
+        // LLM 이 실패하면 빈 지도가 오고 파이프라인이 폴백 문장을 씁니다.
+        // generatedBy 는 그때 fallback 으로 남습니다.
+        SubtractPipeline.Outcome outcome = SubtractPipeline.run(
+                selected, condition, cautions,
+                (drafts, cond) -> reasons.generate(selected, drafts, cond));
 
         String generatedBy = outcome.llmUsed() ? "llm" : "fallback";
 
