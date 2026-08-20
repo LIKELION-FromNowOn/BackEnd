@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ItemUserItemRepository extends JpaRepository<ItemUserItem, String> {
     @Modifying
-    @Query("update ItemUserItem i set i.deletedAt = :deletedAt where i.userId = :userId and i.deletedAt is null")
+    @Query("update ItemUserItem i set i.deletedAt = :deletedAt where i.userId = :userId and i.deletedAt is null and i.custom = false")
     void softDeleteActive(@Param("userId") String userId, @Param("deletedAt") OffsetDateTime deletedAt);
 
     @Query("""
@@ -42,7 +42,10 @@ public interface ItemUserItemRepository extends JpaRepository<ItemUserItem, Stri
                    coalesce(ci.core, 0) as core, coalesce(ci.base, 0) as base, ui.frequency as frequency,
                    case ci.floor when 'essential' then 2 when 'recommended' then 1 when 'excluded' then -1 else 0 end as floor,
                    coalesce(ci.floor, 'optional') as floorCode, ui.is_custom as custom,
-                   case ci.evidence_level when 'high' then 1 when 'medium' then 2 when 'low' then 3 else 0 end as evidenceLevel
+                   case when ui.care_item_id is null
+                        then case when ui.interpreted_by = 'llm' then 3 else 0 end
+                        else case ci.evidence_level when 'high' then 1 when 'medium' then 2 when 'low' then 3 else 0 end
+                   end as evidenceLevel
               from user_items ui left join care_items ci on ci.id = ui.care_item_id
              where ui.user_id = :userId and ui.deleted_at is null
             """, nativeQuery = true)
