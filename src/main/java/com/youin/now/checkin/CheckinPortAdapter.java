@@ -1,5 +1,6 @@
 package com.youin.now.checkin;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
@@ -28,13 +29,23 @@ public class CheckinPortAdapter implements CheckinPort {
     @Override
     @Transactional(readOnly = true)
     public Optional<LatestCheckin> latest(String userId) {
+        boolean recommendationPaused = checkins.findRecommendationPausedByUserId(userId);
         return checkins.findTopByUserIdOrderByCheckDateDesc(userId).map(c -> {
             List<String> ids = signals.findByCheckinId(c.id()).stream()
                     .map(CheckinSignal::signalId)
                     .filter(java.util.Objects::nonNull)     // 직접 입력은 마스터 번호가 없습니다
                     .toList();
             return new LatestCheckin(c.state(), ids, c.signalScore(),
-                    c.createdAt() == null ? null : c.createdAt().toLocalDateTime());
+                    c.createdAt() == null ? null : c.createdAt().toLocalDateTime(),
+                    recommendationPaused);
         });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CheckinStats stats(String userId, LocalDate from, LocalDate to) {
+        long daysRecorded = checkins.countRecordedDays(userId, from, to);
+        String topState = checkins.findTopState(userId, from, to).orElse(null);
+        return new CheckinStats(Math.toIntExact(daysRecorded), topState);
     }
 }
