@@ -7,8 +7,13 @@
 """
 import io, re, sys, pathlib
 
+# 네 개 전부 뽑습니다. 02 는 김민정 님(today/), 03 은 이철희 님(item/) 것이지만
+# 리소스로 뽑아 두면 두 분이 같은 방식으로 쓰실 수 있습니다.
+# 문서가 원본이고 이 파일들은 사본입니다 — 프롬프트를 고치면 문서를 고치고 이걸 다시 도십시오.
 PAIRS = [
     ('docs/prompts/01-subtract-reason.md', 'src/main/resources/prompts/subtract-reason.txt'),
+    ('docs/prompts/02-today-action.md',    'src/main/resources/prompts/today-action.txt'),
+    ('docs/prompts/03-item-interpret.md',  'src/main/resources/prompts/item-interpret.txt'),
     ('docs/prompts/04-coach-answer.md',    'src/main/resources/prompts/coach-answer.txt'),
 ]
 
