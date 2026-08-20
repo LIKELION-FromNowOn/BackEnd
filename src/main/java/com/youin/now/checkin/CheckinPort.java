@@ -38,7 +38,9 @@ public interface CheckinPort {
      * @param signalIds      고른 이상 징후 번호들. 마스터 {@code signals} 14개 중에서
      * @param signalStrength 고른 징후의 가중치 합. <b>5를 넘으면 상태 전환을 제안합니다</b> (합계 상한 25)
      * @param at             체크한 시각
+     * @param recommendationPaused 오늘의 행동 추천을 중단했는지 여부
      */
     record LatestCheckin(String state, List<String> signalIds,
-                         double signalStrength, LocalDateTime at) {}
+                         double signalStrength, LocalDateTime at,
+                         boolean recommendationPaused) {}
 }
