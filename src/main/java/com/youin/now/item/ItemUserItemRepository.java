@@ -38,7 +38,7 @@ public interface ItemUserItemRepository extends JpaRepository<ItemUserItem, Stri
 
     @Query(value = """
             select ui.id as userItemId, coalesce(ui.care_item_id, ui.id) as itemId,
-                   coalesce(ci.name, ui.custom_name) as name, coalesce(ci.category_id, 'life') as categoryId,
+                   coalesce(ci.name, ui.custom_name) as name, coalesce(ci.category_id, ui.custom_category, 'life') as categoryId,
                    coalesce(ci.core, 0) as core, coalesce(ci.base, 0) as base, ui.frequency as frequency,
                    case ci.floor when 'essential' then 2 when 'recommended' then 1 when 'excluded' then -1 else 0 end as floor,
                    coalesce(ci.floor, 'optional') as floorCode, ui.is_custom as custom,

@@ -14,6 +14,8 @@ public class ItemUserItem {
     @Column(name = "user_id", nullable = false) private String userId;
     @Column(name = "care_item_id") private String careItemId;
     @Column(name = "custom_name") private String customName;
+    @Column(name = "custom_category") private String customCategory;
+    @Column(name = "interpreted_by") private String interpretedBy;
     @Column(name = "is_custom", nullable = false) private boolean custom;
     @Column(name = "frequency") private String frequency;
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
@@ -28,6 +30,19 @@ public class ItemUserItem {
         this.careItemId = careItemId;
         this.frequency = frequency;
         this.custom = false;
+    }
+
+    public static ItemUserItem custom(String id, String userId, String name, String category,
+                                      String frequency, String interpretedBy) {
+        ItemUserItem item = new ItemUserItem();
+        item.id = id;
+        item.userId = userId;
+        item.customName = name;
+        item.customCategory = category;
+        item.frequency = frequency;
+        item.interpretedBy = interpretedBy;
+        item.custom = true;
+        return item;
     }
 
     public String id() { return id; }
