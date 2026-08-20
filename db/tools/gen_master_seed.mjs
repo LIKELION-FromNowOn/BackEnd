@@ -14,16 +14,11 @@
  * 실행
  *   node db/tools/gen_master_seed.mjs <데이터폴더> > db/seed_master_v1.sql
  */
-import { readFileSync } from 'node:fs';
-
-const DIR = process.argv[2];
-if (!DIR) { console.error('사용법: node gen_master_seed.mjs <src/data 경로>'); process.exit(1); }
-
-/* items.ts / signals.ts 는 순수 데이터라 export 를 떼고 그대로 평가합니다.
-   손으로 옮겨 적지 않는 것이 이 방식의 목적입니다. */
-const load = (f) => readFileSync(`${DIR}/${f}`, 'utf8').replace(/export const /g, 'var ');
-const { CATS, ITEMS } = eval(load('items.ts') + ';({CATS,ITEMS})');
-const { SIGS }        = eval(load('signals.ts') + ';({SIGS})');
+/* 원본은 db/tools/source/master_source.mjs 에 있습니다.
+   프로토타입 HTML 에서 db/tools/extract_source.mjs 가 뽑은 것이고,
+   손으로 옮겨 적지 않는 것이 이 방식의 목적입니다.
+   원본 HTML 이 바뀌면 extract_source 를 먼저 돌리십시오. */
+import { CATS, ITEMS, SIGS } from './source/master_source.mjs';
 
 /* ── 원본 v6.3.html:1212 그대로. 지어낸 값이 아닙니다 ──
    mn 이 있는 항목(6건)은 그대로 두고, 없는 26건은 id 문자코드 합으로 정합니다.
@@ -35,6 +30,29 @@ const minutesOf = (it) => {
   for (let j = 0; j < it.id.length; j++) s += it.id.charCodeAt(j);
   return T[s % T.length];
 };
+
+/* ── 명세 우선 4건 ─────────────────────────────────────────────────────────────
+   노션 API 명세서 NOW-MASTER-002 의 예시가 원본 프로토타입과 다른 네 건입니다.
+   자료 우선순위상 노션이 앞서고, 2026-08-20 김민정 님과 합의했습니다.
+
+   minutes 를 고치는 이유 — today 의 durationSec 이 minutes x 60 입니다.
+   화면의 「N분」과 타이머에 그대로 들어가고,
+   prompts/today-action.txt:9 가 「durationSec 안에 끝나는 크기로 만듭니다」라
+   AI 가 만드는 문장 길이까지 이 값이 정합니다.
+   공식이 만드는 일곱 값(4·5·7·10·12·15·18)은 짧은 항목에는 맞지만
+   「헬스장 가기 · 10분」처럼 원래 긴 항목에서는 말이 안 됩니다.
+
+   나머지 26건은 원본 공식 그대로 둡니다. 명세에 개별 값이 없습니다. */
+const SPEC = {
+  cr1: { fq: 1, df: '매일' },   // 명세 frequencyEditable true · daily
+  cr2: { fq: 1, df: '매일' },   // 〃
+  mv1: { base: 4, mn: 60 },     // 명세 base 4 · minutes 60  (헬스장 가기)
+  mm1: { mn: 3 },               // 명세 minutes 3            (처방약 복용)
+};
+
+/* 이 아래로는 FINAL 만 씁니다. SPEC 이 반영된 32건입니다.
+   ITEMS 를 그대로 세면 사람이 보는 숫자가 SQL 과 달라집니다. */
+const FINAL = ITEMS.map((r) => ({ ...r, ...(SPEC[r.id] || {}) }));
 
 const FLOOR = { 2: 'essential', 1: 'recommended', 0: 'optional', '-1': 'excluded' };
 const EVID  = { 1: 'high', 2: 'medium', 3: 'low' };
@@ -97,11 +115,12 @@ p();
 /* ── 2. 관리 항목 32 ── */
 p('-- ── 관리 항목 32 ────────────────────────────────────────────────────────────');
 p('--   core · base 는 DECIMAL(3,1) 입니다. 2.5 를 2 로 반올림하면 판정이 뒤집힙니다.');
-p('--   minutes 는 원본 계산식 결과입니다. 임의로 바꾸면 화면의 「N분」이 어긋납니다.');
+p('--   minutes 는 today 의 durationSec(= minutes x 60) 이 됩니다. 타이머와 AI 문장 길이를 정합니다.');
+p('--   cr1 · cr2 · mv1 · mm1 네 건은 노션 명세서 값입니다. 나머지 26건은 원본 공식입니다.');
 p('INSERT INTO care_items');
 p('  (id, category_id, name, floor, evidence_level, core, base, minutes,');
 p('   frequency_editable, default_frequency) VALUES');
-const rows = ITEMS.map((it) => {
+const rows = FINAL.map((it) => {
   const floor = must(FLOOR, it.floor, 'floor', it.id);
   const evid  = must(EVID,  it.g,     'evidence_level', it.id);
   const df    = it.df ? q(must(FREQ, it.df, 'default_frequency', it.id)) : 'NULL';
@@ -131,16 +150,16 @@ p("UNION ALL SELECT '징후 가중치 합', SUM(weight), 25 FROM signals");
 p("UNION ALL SELECT '하한선 essential', COUNT(*), 7 FROM care_items WHERE floor='essential'");
 p("UNION ALL SELECT '하한선 excluded', COUNT(*), 3 FROM care_items WHERE floor='excluded'");
 /* DECIMAL 이 SMALLINT 로 되돌아가면 여기서 0 이 나옵니다.
-   값은 9개지만 행은 7개입니다 — cr3 과 cr4 는 core 와 base 가 둘 다 소수입니다. */
-p("UNION ALL SELECT '소수 있는 행', COUNT(*), 7 FROM care_items");
+   mv1 은 base 가 1.6 에서 명세값 4.0 이 되어 빠졌습니다. cr3 · cr4 는 둘 다 소수입니다. */
+p("UNION ALL SELECT '소수 있는 행', COUNT(*), 6 FROM care_items");
 p("     WHERE core <> ROUND(core) OR base <> ROUND(base)");
-p("UNION ALL SELECT '빈도 편집 가능', COUNT(*), 10 FROM care_items WHERE frequency_editable;");
+p("UNION ALL SELECT '빈도 편집 가능', COUNT(*), 12 FROM care_items WHERE frequency_editable;");
 
 console.log(out.join('\n'));
 
 /* 사람이 볼 요약은 stderr 로. stdout 은 SQL 만 나가야 합니다. */
-const n = (f) => ITEMS.filter(f).length;
-console.error(`카테고리 ${CATS.length} · 항목 ${ITEMS.length} · 징후 ${SIGS.length}`);
+const n = (f) => FINAL.filter(f).length;   // ITEMS 가 아니라 FINAL 입니다
+console.error(`카테고리 ${CATS.length} · 항목 ${FINAL.length} · 징후 ${SIGS.length}`);
 console.error(`가중치 합 ${SIGS.reduce((a, s) => a + s.w, 0)}`);
 console.error(`essential ${n(i => i.floor === 2)} · recommended ${n(i => i.floor === 1)} · ` +
               `optional ${n(i => i.floor === 0)} · excluded ${n(i => i.floor === -1)}`);

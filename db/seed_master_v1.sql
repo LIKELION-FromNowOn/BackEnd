@@ -37,12 +37,13 @@ INSERT INTO categories (id, name, sort_order) VALUES
 
 -- ── 관리 항목 32 ────────────────────────────────────────────────────────────
 --   core · base 는 DECIMAL(3,1) 입니다. 2.5 를 2 로 반올림하면 판정이 뒤집힙니다.
---   minutes 는 원본 계산식 결과입니다. 임의로 바꾸면 화면의 「N분」이 어긋납니다.
+--   minutes 는 today 의 durationSec(= minutes x 60) 이 됩니다. 타이머와 AI 문장 길이를 정합니다.
+--   cr1 · cr2 · mv1 · mm1 네 건은 노션 명세서 값입니다. 나머지 26건은 원본 공식입니다.
 INSERT INTO care_items
   (id, category_id, name, floor, evidence_level, core, base, minutes,
    frequency_editable, default_frequency) VALUES
-  ('cr1', 'care', '아침 보습 루틴', 'essential', 'high', 4.0, 2.0, 4, FALSE, NULL),
-  ('cr2', 'care', '외출 전 자외선 차단', 'essential', 'high', 5.0, 2.0, 4, FALSE, NULL),
+  ('cr1', 'care', '아침 보습 루틴', 'essential', 'high', 4.0, 2.0, 4, TRUE, 'daily'),
+  ('cr2', 'care', '외출 전 자외선 차단', 'essential', 'high', 5.0, 2.0, 4, TRUE, 'daily'),
   ('cr3', 'care', '저녁 저자극 세안', 'recommended', 'high', 2.5, 2.5, 5, FALSE, NULL),
   ('cr4', 'care', '고기능성 · 각질 관리', 'optional', 'medium', 2.5, 3.5, 7, FALSE, NULL),
   ('cr5', 'care', '홈케어 기록 남기기', 'optional', 'low', 2.0, 2.2, 3, FALSE, NULL),
@@ -51,7 +52,7 @@ INSERT INTO care_items
   ('sl2', 'sleep', '취침 시각 고정하기', 'essential', 'high', 5.0, 2.0, 4, FALSE, NULL),
   ('sl3', 'sleep', '자기 전 폰 안 보기', 'optional', 'medium', 3.0, 4.0, 5, FALSE, NULL),
   ('sl4', 'sleep', '기상 후 스트레칭', 'optional', 'low', 2.0, 2.0, 7, FALSE, NULL),
-  ('mv1', 'move', '헬스장 가기', 'recommended', 'high', 3.0, 1.6, 10, TRUE, 'weekly_4plus'),
+  ('mv1', 'move', '헬스장 가기', 'recommended', 'high', 3.0, 4.0, 60, TRUE, 'weekly_4plus'),
   ('mv2', 'move', '러닝', 'recommended', 'medium', 3.0, 1.2, 12, TRUE, 'weekly_3'),
   ('mv3', 'move', '홈트', 'recommended', 'low', 2.0, 1.0, 15, TRUE, 'daily'),
   ('mv4', 'move', '스트레칭 10분', 'recommended', 'low', 2.0, 1.0, 18, FALSE, NULL),
@@ -71,7 +72,7 @@ INSERT INTO care_items
   ('lf4', 'life', '독서', 'optional', 'low', 2.0, 1.0, 10, TRUE, 'daily'),
   ('lf5', 'life', '영어 공부', 'optional', 'medium', 2.0, 1.4, 12, TRUE, 'daily'),
   ('lf6', 'life', '방 청소', 'optional', 'low', 2.0, 2.0, 15, TRUE, 'weekly_2'),
-  ('mm1', 'med', '처방약 복용', 'excluded', 'high', 5.0, 1.0, 5, FALSE, NULL),
+  ('mm1', 'med', '처방약 복용', 'excluded', 'high', 5.0, 1.0, 3, FALSE, NULL),
   ('mm2', 'med', '병원 정기 검진', 'excluded', 'high', 5.0, 2.0, 7, FALSE, NULL);
 
 -- ── 이상 징후 14 ────────────────────────────────────────────────────────────
@@ -101,6 +102,6 @@ UNION ALL SELECT '이상 징후', COUNT(*), 14 FROM signals
 UNION ALL SELECT '징후 가중치 합', SUM(weight), 25 FROM signals
 UNION ALL SELECT '하한선 essential', COUNT(*), 7 FROM care_items WHERE floor='essential'
 UNION ALL SELECT '하한선 excluded', COUNT(*), 3 FROM care_items WHERE floor='excluded'
-UNION ALL SELECT '소수 있는 행', COUNT(*), 7 FROM care_items
+UNION ALL SELECT '소수 있는 행', COUNT(*), 6 FROM care_items
      WHERE core <> ROUND(core) OR base <> ROUND(base)
-UNION ALL SELECT '빈도 편집 가능', COUNT(*), 10 FROM care_items WHERE frequency_editable;
+UNION ALL SELECT '빈도 편집 가능', COUNT(*), 12 FROM care_items WHERE frequency_editable;
