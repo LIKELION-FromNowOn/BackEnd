@@ -36,9 +36,8 @@ import java.util.UUID;
  * {@code userItemId} 로 {@code care_items} 를 찾으면 <b>항상 못 찾습니다</b> —
  * 그쪽은 {@code user_items.id} 입니다.
  *
- * <p>⚠️ <b>ErrorCode 네 개가 아직 없습니다</b> — {@code ACTION_NOT_FOUND} ·
- * {@code REROLL_LIMIT} · {@code ALREADY_COMPLETED} · {@code NO_EVALUATION}.
- * {@code common/error/} 는 이철희 님 소유라 추가되면 바꿉니다. 상태 코드는 맞춰 뒀습니다.
+ * <p>⚠️ <b>{@code RECOMMENDATION_PAUSED} 는 아직 안 넣었습니다.</b> {@code ErrorCode} 에는
+ * 있는데 {@code recommendationPaused} 를 읽을 포트가 없습니다.
  */
 @Service
 public class TodayService {
@@ -76,8 +75,9 @@ public class TodayService {
     /**
      * 오늘의 행동 조회. <b>없으면 이 시점에 만듭니다.</b>
      *
-     * <p><b>판정이 없으면 409 입니다.</b> 「후보가 없어서 없다」와 「판정을 아직 안 했다」는
-     * 화면에서 다르게 처리해야 합니다. 앞의 것만 첫 발자국 카드로 갑니다.
+     * <p><b>판정이 없으면 409 {@code NO_EVALUATION} 입니다.</b> 「후보가 없어서 없다」와
+     * 「판정을 아직 안 했다」는 화면에서 다르게 처리해야 합니다.
+     * 앞의 것만 첫 발자국 카드로 갑니다.
      *
      * @return 후보가 없으면 {@code null} — 첫 발자국 카드로 넘깁니다
      */
@@ -90,10 +90,8 @@ public class TodayService {
             return toRes(userId, existing.get(), "llm");
         }
 
-        // TODO ErrorCode.NO_EVALUATION 추가되면 교체
         VerdictPort.VerdictSet set = verdicts.of(userId, LocalDate.now(KST))
-                .orElseThrow(() -> new ApiException(
-                        ErrorCode.NO_CHECKIN, "덜어내기를 먼저 진행해 주세요"));
+                .orElseThrow(() -> new ApiException(ErrorCode.NO_EVALUATION));
 
         return create(userId, set, null, now);
     }
@@ -111,23 +109,20 @@ public class TodayService {
 
         TodayAction action = mine(userId, actionId);
 
-        // TODO ErrorCode.ALREADY_COMPLETED 추가되면 교체 (409)
         if (TodayAction.DONE.equals(action.status())) {
-            throw new ApiException(ErrorCode.VALIDATION_FAILED, "이미 완료한 행동입니다");
+            throw new ApiException(ErrorCode.ALREADY_COMPLETED);
         }
-        // TODO ErrorCode.REROLL_LIMIT 추가되면 교체
         if (action.rerollCount() >= REROLL_LIMIT) {
-            throw new ApiException(ErrorCode.RATE_LIMITED, "다시 받기 한도를 넘었습니다");
+            throw new ApiException(ErrorCode.REROLL_LIMIT);
         }
 
         VerdictPort.VerdictSet set = verdicts.of(userId, LocalDate.now(KST))
-                .orElseThrow(() -> new ApiException(
-                        ErrorCode.NO_CHECKIN, "덜어내기를 먼저 진행해 주세요"));
+                .orElseThrow(() -> new ApiException(ErrorCode.NO_EVALUATION));
 
         short before = action.rerollCount();
         TodayRes.Action a = create(userId, set, action, now);
         if (a == null) {
-            throw new ApiException(ErrorCode.NOT_FOUND, "제안할 행동이 더 없습니다");
+            throw new ApiException(ErrorCode.ACTION_NOT_FOUND, "제안할 행동이 더 없습니다");
         }
         return new TodayRes.Reroll(
                 a.actionId(), a.categoryId(), a.categoryName(), a.title(),
@@ -195,9 +190,8 @@ public class TodayService {
         }
         TodayAction action = mine(userId, actionId);
 
-        // TODO ErrorCode.ALREADY_COMPLETED 추가되면 교체 (409)
         if (TodayAction.DONE.equals(action.status())) {
-            throw new ApiException(ErrorCode.VALIDATION_FAILED, "이미 완료한 행동입니다");
+            throw new ApiException(ErrorCode.ALREADY_COMPLETED);
         }
         action.reject();
         actions.save(action);
@@ -320,10 +314,9 @@ public class TodayService {
         }
     }
 
-    // TODO ErrorCode.ACTION_NOT_FOUND 추가되면 교체
     private TodayAction mine(String userId, String actionId) {
         TodayAction a = actions.findById(actionId)
-                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "행동을 찾을 수 없습니다"));
+                .orElseThrow(() -> new ApiException(ErrorCode.ACTION_NOT_FOUND));
         if (!a.userId().equals(userId)) throw new ApiException(ErrorCode.FORBIDDEN);
         return a;
     }
