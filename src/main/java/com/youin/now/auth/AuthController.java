@@ -1,6 +1,8 @@
 package com.youin.now.auth;
 
 import com.youin.now.common.response.ApiResponse;
+import com.youin.now.common.security.CurrentUser;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,5 +34,22 @@ public class AuthController {
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<AuthGuestRes> guest() {
         return ApiResponse.ok(authService.issueGuest());
+    }
+
+    @PostMapping("/signup")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<AuthSignupRes> signup(@RequestBody AuthSignupReq req) {
+        return ApiResponse.ok(authService.signup(req));
+    }
+
+    @PostMapping("/login")
+    public ApiResponse<AuthLoginRes> login(@RequestBody AuthLoginReq req) {
+        return ApiResponse.ok(authService.login(req));
+    }
+
+    /** 토큰 무효화는 하지 않습니다. 인증 성공 뒤 클라이언트가 저장한 토큰을 지우면 됩니다. */
+    @PostMapping("/logout")
+    public ApiResponse<AuthLogoutRes> logout(@CurrentUser String userId) {
+        return ApiResponse.ok(new AuthLogoutRes(true));
     }
 }

@@ -80,8 +80,20 @@ public class AuthUser {
         return u;
     }
 
+    public static AuthUser member(String id, String email, String nickname, String passwordHash) {
+        AuthUser u = new AuthUser();
+        u.id = id;
+        u.email = email;
+        u.nickname = nickname;
+        u.passwordHash = passwordHash;
+        u.isGuest = false;
+        u.lastLoginAt = OffsetDateTime.now();
+        return u;
+    }
+
     public String id()                   { return id; }
     public String email()                { return email; }
+    public String passwordHash()         { return passwordHash; }
     public String nickname()             { return nickname; }
     public boolean isGuest()             { return isGuest; }
     public boolean hasSeenOnboarding()   { return hasSeenOnboarding; }
@@ -99,4 +111,7 @@ public class AuthUser {
         this.passwordHash = passwordHash;
         this.isGuest = false;
     }
+
+    public void updateNickname(String nickname) { this.nickname = nickname; }
+    public void updateEmail(String email)       { this.email = email; }
 }

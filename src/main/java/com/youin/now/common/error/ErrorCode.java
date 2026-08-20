@@ -20,6 +20,13 @@ public enum ErrorCode {
     RATE_LIMITED     (HttpStatus.TOO_MANY_REQUESTS,  "호출 한도를 초과했습니다"),
     INTERNAL_ERROR   (HttpStatus.INTERNAL_SERVER_ERROR, "잠시 후 다시 시도해 주십시오"),
 
+    // 인증
+    EMAIL_ALREADY_EXISTS (HttpStatus.CONFLICT, "이미 등록된 이메일입니다"),
+    INVALID_CREDENTIALS  (HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다"),
+    USER_NOT_FOUND       (HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"),
+    NO_FIELDS            (HttpStatus.BAD_REQUEST, "수정할 값이 없습니다"),
+    GUEST_FORBIDDEN      (HttpStatus.FORBIDDEN, "게스트는 프로필을 수정할 수 없습니다"),
+
     // 관리 항목
     MIN_ITEMS_REQUIRED(HttpStatus.BAD_REQUEST, "관리 항목을 3개 이상 선택해 주세요"),
     ITEM_NOT_FOUND    (HttpStatus.NOT_FOUND,   "항목을 찾을 수 없습니다"),
