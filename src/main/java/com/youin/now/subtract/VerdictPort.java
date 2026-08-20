@@ -17,6 +17,15 @@ import java.util.Optional;
  */
 public interface VerdictPort {
 
+    /*
+     * 2026-08-20 — VerdictSet 과 ItemVerdict 에 필드를 더했습니다.
+     * docs/04-ports.md:44 는 아직 옛 시그니처입니다 (.agent/REQUESTS.md #37).
+     *
+     * 왜 — actions 테이블이 evaluation_id 와 user_item_id 를 둘 다 NOT NULL 외래키로
+     * 요구하는데 이 창구가 그 둘을 안 날랐습니다. today/ 가 행동을 저장할 수가 없습니다.
+     * 소비자가 아직 없을 때 고치는 것이 가장 쌉니다.
+     */
+
     /**
      * @return 그날 판정이 아직 없으면 {@link Optional#empty()}
      */
@@ -27,13 +36,22 @@ public interface VerdictPort {
      */
     Summary summary(String userId, LocalDate date);
 
-    record VerdictSet(List<ItemVerdict> results) {}
+    /**
+     * @param evaluationId <b>2026-08-20 추가.</b> {@code actions.evaluation_id} 가 {@code NOT NULL}
+     *                     외래키라 {@code today/} 가 「오늘의 행동」을 저장할 때 반드시 필요합니다
+     */
+    record VerdictSet(String evaluationId, List<ItemVerdict> results) {}
 
     /**
+     * @param userItemId <b>2026-08-20 추가.</b> {@code user_items.id}.
+     *                   {@code actions.user_item_id} 외래키가 이 값을 요구합니다
+     * @param itemId     {@code care_items.id} — {@code cr4} 처럼. <b>화면에 나가는 것은 이쪽</b>입니다
+     *                   ({@code docs/07-response-rules.md:57}). 항목 이름도 이것으로 찾습니다.
+     *                   <b>직접 입력 항목은 마스터가 없어 {@code userItemId} 와 같은 값이 옵니다</b>
      * @param verdict    keep | simplify | reduce | skip | excluded
      * @param excludedBy excluded 일 때만. medical | clinicNote. 아니면 null
      */
-    record ItemVerdict(String itemId, String verdict,
+    record ItemVerdict(String userItemId, String itemId, String verdict,
                        String reason, String excludedBy) {}
 
     record Summary(int keep, int simplify, int reduce,
