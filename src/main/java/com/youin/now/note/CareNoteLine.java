@@ -35,6 +35,13 @@ public class CareNoteLine {
 
     protected CareNoteLine() { }
 
+    /** {@code sentNo} 는 <b>1부터</b>입니다. {@code cautions[].sent} 가 이 번호를 가리킵니다 */
+    public CareNoteLine(String careNoteId, short sentNo, String text) {
+        this.careNoteId = careNoteId;
+        this.sentNo = sentNo;
+        this.text = text;
+    }
+
     public short sentNo() { return sentNo; }
     public String text()  { return text; }
 

@@ -1,6 +1,7 @@
 package com.youin.now.subtract;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +14,19 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, String> 
     Optional<Evaluation> findByCheckinId(String checkinId);
 
     Optional<Evaluation> findTopByUserIdOrderByCreatedAtDesc(String userId);
+
+    /**
+     * 기록 탭 H03 — 판정 이력. <b>최근 것이 먼저</b>입니다.
+     *
+     * <p>기간을 안 주면 전부입니다. {@code created_at} 이 {@code DATETIME} 이라 날짜 경계로 자릅니다.
+     */
+    @Query("select e from Evaluation e where e.userId = :userId "
+         + "and (:from is null or e.createdAt >= :from) "
+         + "and (:to is null or e.createdAt < :to) "
+         + "order by e.createdAt desc")
+    List<Evaluation> findHistory(@Param("userId") String userId,
+                                 @Param("from") java.time.OffsetDateTime from,
+                                 @Param("to") java.time.OffsetDateTime to);
 
     /** 홈 전용 — 그날 판정. {@code created_at} 이 {@code DATETIME} 이라 날짜로 자릅니다 */
     @Query("select e from Evaluation e where e.userId = :userId "
