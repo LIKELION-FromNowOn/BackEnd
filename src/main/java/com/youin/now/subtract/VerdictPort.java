@@ -54,6 +54,27 @@ public interface VerdictPort {
     Stats stats(String userId, LocalDate from, LocalDate to);
 
     /**
+     * 홈의 {@code subtract} 블록. <b>{@code NOW-HOME-001} 이 요구하는 세 칸을 그대로 냅니다.</b>
+     *
+     * <p>{@link #summary} 는 개수 다섯 개만 줍니다 — {@code evaluationId} 를 얻을 자리가 없어
+     * 김민정 님이 홈을 만들 수 없었습니다. {@code Summary} 에 칸을 더하면
+     * {@code SubtractPipeline} 까지 파급되므로 <b>메서드를 따로 엽니다.</b>
+     *
+     * <p><b>그날 판정이 없으면 {@code null} 입니다</b> — 명세가 「subtract: object (null 허용).
+     * 판정 전이면 null」로 정했습니다.
+     */
+    HomeSubtract subtractForHome(String userId, LocalDate date);
+
+    /**
+     * @param removedCount <b>오늘 걷어낸 항목 수 = {@code reduce + skip}.</b>
+     *                     {@code simplify} 는 <b>세지 않습니다</b> — 「양과 목표는 그대로 두고
+     *                     측정·실행 방식만 낮춤」이라 걷어낸 것이 아닙니다.
+     *                     명세 예시가 {@code keep 3 · simplify 2 · reduce 1 · skip 1 · excluded 2} 에
+     *                     {@code removedCount 2} 입니다 — {@code reduce + skip} 과만 맞습니다.
+     */
+    record HomeSubtract(String evaluationId, Summary summary, int removedCount) {}
+
+    /**
      * @param daysSubtracted <b>덜어내기를 한 날 수.</b> 판정 횟수가 아니라 날짜 수입니다 —
      *                       같은 날 두 번 판정해도 하루입니다
      * @param topSubtracted  자주 덜어낸 항목. <b>많은 것부터</b>. {@code keep} 과 {@code excluded} 는 셈에서 뺍니다
