@@ -31,6 +31,9 @@ public class CheckinService {
     /** 전환 제안 임계값. <b>명세서 값이며 코드에서 바꾸지 마십시오.</b> */
     private static final int THRESHOLD = 5;
 
+    /** 조회 응답도 같은 임계값을 써야 해서 밖으로 엽니다. */
+    public static int threshold() { return THRESHOLD; }
+
     /** 징후 14개의 가중치 합. 명세서 {@code maxScore} */
     private static final int MAX_SCORE = 25;
 

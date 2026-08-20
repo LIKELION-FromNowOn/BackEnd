@@ -45,7 +45,7 @@ public class CheckinController {
     @GetMapping("/latest")
     public ApiResponse<CheckinLatestRes> latest(@CurrentUser String userId) {
         return ApiResponse.ok(checkinService.latest(userId)
-                .map(CheckinLatestRes::from)
+                .map(c -> CheckinLatestRes.from(c, CheckinService.threshold()))
                 .orElseThrow(() -> new ApiException(ErrorCode.NO_CHECKIN)));
     }
 }

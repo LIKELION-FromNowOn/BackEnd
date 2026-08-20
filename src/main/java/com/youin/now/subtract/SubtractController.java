@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -39,10 +40,21 @@ public class SubtractController {
         return ApiResponse.ok(subtractService.evaluate(userId, req.checkinId()));
     }
 
-    /** {@code NOW-SUB-002} 최근 판정 조회. 없으면 {@code 404 EVALUATION_NOT_FOUND} */
-    @GetMapping("/latest")
-    public ApiResponse<SubtractRes> latest(@CurrentUser String userId) {
-        return ApiResponse.ok(subtractService.latest(userId));
+    /**
+     * {@code NOW-SUB-002} 판정 결과 조회. 없으면 {@code 404 EVALUATION_NOT_FOUND}
+     *
+     * <p><b>2026-08-20 경로를 {@code /latest} 에서 {@code /result} 로 고쳤습니다.</b>
+     * 명세서와 프론트 목이 둘 다 {@code /subtract/result} 인데 서버만 달랐습니다.
+     * 이대로 두면 프론트가 스위치를 켜는 순간 404 가 났습니다.
+     *
+     * @param evaluationId 없으면 가장 최근 판정
+     * @param verdict      {@code ?verdict=reduce,skip} — 콤마로 여러 개
+     */
+    @GetMapping("/result")
+    public ApiResponse<SubtractRes> result(@CurrentUser String userId,
+                                           @RequestParam(required = false) String evaluationId,
+                                           @RequestParam(required = false) String verdict) {
+        return ApiResponse.ok(subtractService.result(userId, evaluationId, verdict));
     }
 
     /**
@@ -52,8 +64,9 @@ public class SubtractController {
      * 화면에서는 되돌리기 버튼 자체를 띄우지 마십시오 — 응답의 {@code revertable} 을 보시면 됩니다.
      */
     @PostMapping("/{itemId}/revert")
-    public ApiResponse<SubtractRes> revert(@CurrentUser String userId,
-                                           @PathVariable String itemId) {
-        return ApiResponse.ok(subtractService.revert(userId, itemId));
+    public ApiResponse<SubtractRevertRes> revert(@CurrentUser String userId,
+                                                 @PathVariable String itemId,
+                                                 @Valid @RequestBody SubtractRevertReq req) {
+        return ApiResponse.ok(subtractService.revert(userId, itemId, req.evaluationId()));
     }
 }
