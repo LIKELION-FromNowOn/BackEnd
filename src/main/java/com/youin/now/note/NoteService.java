@@ -188,6 +188,23 @@ public class NoteService {
         }
     }
 
+    /**
+     * 홈의 {@code care} 블록. <b>{@link #careContext} 를 홈 모양으로 줄인 것</b>입니다.
+     *
+     * <p>홈은 {@code dp} 와 {@code keywords} 를 안 씁니다 — 명세 {@code NOW-HOME-001} 의
+     * {@code care.cautions[]} 는 {@code itemId} · {@code text} · {@code sent} · {@code daysLeft} 넷입니다.
+     * 안 쓰는 값을 실어 보내면 홈 응답이 커지기만 합니다.
+     */
+    @Transactional(readOnly = true)
+    public NoteRulePort.CareContext careForHome(String userId) {
+        CareRes c = careContext(userId);
+        List<NoteRulePort.Caution> out = new ArrayList<>();
+        for (CareRes.Caution x : c.cautions()) {
+            out.add(new NoteRulePort.Caution(x.itemId(), x.text(), x.sent(), x.daysLeft()));
+        }
+        return new NoteRulePort.CareContext(c.lastType(), c.ago(), out, c.hasNote());
+    }
+
     @Transactional(readOnly = true)
     public boolean hasNote(String userId) {
         return notes.findTopByUserIdOrderByReceivedAtDescCreatedAtDesc(userId).isPresent();
