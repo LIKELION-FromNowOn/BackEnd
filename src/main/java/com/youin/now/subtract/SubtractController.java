@@ -1,6 +1,7 @@
 package com.youin.now.subtract;
 
 import com.youin.now.common.error.ErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -43,7 +44,26 @@ public class SubtractController {
     @PostMapping("/evaluate")
     public ApiResponse<SubtractRes> evaluate(@CurrentUser String userId,
                                              @Valid @RequestBody SubtractEvaluateReq req) {
-        return ApiResponse.ok(subtractService.evaluate(userId, req.checkinId()));
+        try {
+            return ApiResponse.ok(subtractService.evaluate(userId, req.checkinId()));
+        } catch (DataIntegrityViolationException e) {
+            // 같은 checkinId 로 판정이 동시에 두 번 들어온 경우입니다.
+            //
+            // evaluations 에 UNIQUE (checkin_id) 가 있고(schema_v63.sql:303),
+            // SubtractService 는 「있으면 재사용, 없으면 생성」인데 그 검사와 INSERT 사이가
+            // 원자적이지 않습니다. 둘 다 「없음」을 보고 각자 만들면 뒤에 온 쪽이 여기로 옵니다.
+            //
+            // 뒤에 온 쪽에서 다시 판정하지 않고 **먼저 만들어진 판정을 그대로 돌려줍니다.**
+            // 「체크 하나에 판정 하나」라서 두 요청의 결과가 같아야 맞습니다.
+            // 다시 부르면 AI 문장이 새로 나와 같은 화면에서 두 사람이 다른 근거를 보게 됩니다.
+            //
+            // 유니크 키 때문에 뒤에 온 INSERT 는 앞 트랜잭션이 끝날 때까지 기다렸다가 실패하므로,
+            // 여기 도착한 시점에는 앞의 판정이 이미 커밋돼 있습니다.
+            //
+            // 2026-08-21 황인서 님 3차 회신에서 신고. 화면을 빠르게 두 번 누르거나
+            // 탭을 두 개 열면 납니다. 개발 모드의 StrictMode 에서도 재현됩니다.
+            return ApiResponse.ok(subtractService.result(userId, null, null));
+        }
     }
 
     /**
