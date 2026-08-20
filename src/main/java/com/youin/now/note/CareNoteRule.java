@@ -61,11 +61,12 @@ public class CareNoteRule {
      * <p>⚠️ {@code keywords} 가 비면 <b>케어 코치가 이 주의사항을 못 찾습니다.</b>
      */
     public CareNoteRule(String id, String careNoteId, short sentNo,
-                        String cautionText, short dp, String careItemId) {
+                        String cautionText, String keywords, short dp, String careItemId) {
         this.id = id;
         this.careNoteId = careNoteId;
         this.sentNo = sentNo;
         this.cautionText = cautionText;
+        this.keywords = keywords;
         this.dp = dp;
         this.careItemId = careItemId;
     }

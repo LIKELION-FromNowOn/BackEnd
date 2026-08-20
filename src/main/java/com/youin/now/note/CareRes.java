@@ -22,8 +22,13 @@ public record CareRes(String lastType,
                       boolean hasNote,
                       Integer saved) {
 
-    /** @param daysLeft <b>저장값이 아닙니다.</b> 읽을 때마다 {@code max(0, dp − 경과일)} 로 셉니다 */
-    public record Caution(String itemId, String text, int sent, Integer dp, Integer daysLeft) { }
+    /**
+     * @param daysLeft <b>저장값이 아닙니다.</b> 읽을 때마다 {@code max(0, dp − 경과일)} 로 셉니다
+     * @param keywords <b>명세에 없는데 더 주는 것입니다.</b> 조회한 뒤 다시 저장할 때
+     *                 이 값을 잃으면 코치와 충돌 표시가 조용히 멈춥니다
+     */
+    public record Caution(String itemId, String text, int sent, Integer dp, Integer daysLeft,
+                          List<String> keywords) { }
 
     static CareRes empty() {
         return new CareRes(null, null, List.of(), false, null);
