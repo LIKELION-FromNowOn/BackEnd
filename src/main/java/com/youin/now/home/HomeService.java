@@ -20,11 +20,10 @@ import java.time.ZoneId;
  * 여기서는 붙이기만 합니다 ({@code docs/04-ports.md}).
  *
  * <p><b>{@code VerdictPort.of()} 를 부르지 않습니다.</b> 판정 32건이 통째로 오면
- * 홈이 무거워집니다. 그래서 창구가 둘로 나뉘어 있습니다.
+ * 홈이 무거워집니다. 그래서 창구가 {@code subtractForHome} 으로 따로 나뉘어 있습니다.
  *
- * <p>⚠️ <b>아직 못 채우는 셋</b> —
- * {@code state} 와 {@code recommendationPaused} 는 {@code CheckinPort} 대기,
- * {@code subtract} 는 {@code VerdictPort.subtractForHome} 머지 대기입니다.
+ * <p>⚠️ <b>아직 못 채우는 둘</b> — {@code recommendationPaused} 와
+ * {@code unlock.recordedDays} 는 {@code CheckinPort} 대기입니다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -73,18 +72,24 @@ public class HomeService {
         String state = checkin == null ? null : checkin.state();
 
         int itemCount = items.selected(userId).size();
-        var verdictSummary = verdicts.summary(userId, today);
+
+        // 덜어내기 요약. 판정이 없으면 포트가 null 을 주고, 명세도 「판정 전이면 null」입니다
+        // removedCount 는 포트가 reduce + skip 으로 계산해 줍니다. simplify 는 세지 않습니다
+        var hs = verdicts.subtractForHome(userId, today);
+        HomeRes.Subtract subtract = hs == null ? null
+                : new HomeRes.Subtract(
+                hs.evaluationId(),
+                new HomeRes.Summary(
+                        hs.summary().keep(), hs.summary().simplify(),
+                        hs.summary().reduce(), hs.summary().skip(),
+                        hs.summary().excluded()),
+                hs.removedCount());
+
         var todayCard = todayService.todayForHome(userId);
 
         // 추천 중단이면 첫 발자국 카드를 내립니다 —
-        // 아무것도 안 해도 되는 날에 남의 사례를 보여 주면 부담이 됩니다
+        // 아무것도 안 해도 되는 날에 남의 사례를 보여 주면 부담이 됩니다 (규칙 3)
         var footstepCard = paused ? null : footstepService.footstepForHome(userId);
-
-        // TODO VerdictPort.subtractForHome(userId, date) 가 머지되면 채웁니다 (송원석 님)
-        //      → { evaluationId, summary, removedCount }
-        //      removedCount 는 reduce + skip 입니다. simplify 는 뺍니다
-        //      그날 판정이 없으면 null 이고, 명세도 「판정 전이면 null」입니다
-        HomeRes.Subtract subtract = null;
 
         // TODO CheckinPort.stats 가 열리면 채웁니다 (이철희 님)
         //      recordedDays = COUNT(DISTINCT check_date) FROM checkins
@@ -92,7 +97,7 @@ public class HomeService {
         int recordedDays = 0;
 
         return new HomeRes(
-                nextStepOf(paused, itemCount, checkin != null, verdictSummary, todayCard),
+                nextStepOf(paused, itemCount, checkin != null, subtract, todayCard),
                 state,
                 paused,
                 noteRules.careForHome(userId),
@@ -115,16 +120,12 @@ public class HomeService {
      * <p>나머지는 {@code onboarding → checkin → subtract → action → done} 순입니다.
      */
     private String nextStepOf(boolean paused, int itemCount, boolean hasCheckin,
-                              VerdictPort.Summary summary, TodayService.ForHome todayCard) {
+                              HomeRes.Subtract subtract, TodayService.ForHome todayCard) {
 
         if (paused) return "rest";
         if (itemCount < MIN_ITEMS) return "onboarding";
         if (!hasCheckin) return "checkin";
-
-        // 판정이 없으면 개수가 전부 0 입니다
-        int judged = summary.keep() + summary.simplify() + summary.reduce()
-                + summary.skip() + summary.excluded();
-        if (judged == 0) return "subtract";
+        if (subtract == null) return "subtract";
 
         if (todayCard == null) return "action";
         if (TodayAction.DONE.equals(todayCard.status())) return "done";
