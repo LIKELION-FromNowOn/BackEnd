@@ -28,16 +28,20 @@ public class LogController {
     }
 
     /**
-     * {@code NOW-LOG-001} 완료한 행동을 날짜별로.
+     * {@code NOW-LOG-001} 완료한 행동. <b>평평한 배열</b>로 나갑니다.
      *
-     * @param from 없으면 30일 전
-     * @param to   없으면 오늘
+     * @param from       없으면 30일 전
+     * @param to         없으면 오늘
+     * @param categoryId 없으면 전부
+     * @param limit      1~100, 기본 30
      */
     @GetMapping
-    public ApiResponse<LogRes.Days> getLogs(@CurrentUser String userId,
+    public ApiResponse<LogRes.Logs> getLogs(@CurrentUser String userId,
                                             @RequestParam(required = false) String from,
-                                            @RequestParam(required = false) String to) {
-        return ApiResponse.ok(logService.getLogs(userId, from, to));
+                                            @RequestParam(required = false) String to,
+                                            @RequestParam(required = false) String categoryId,
+                                            @RequestParam(required = false) Integer limit) {
+        return ApiResponse.ok(logService.getLogs(userId, from, to, categoryId, limit));
     }
 
     /**

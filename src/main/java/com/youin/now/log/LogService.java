@@ -3,8 +3,11 @@ package com.youin.now.log;
 import com.youin.now.common.error.ApiException;
 import com.youin.now.common.error.ErrorCode;
 import com.youin.now.item.ItemPort;
+import com.youin.now.master.MasterCareItem;
+import com.youin.now.master.MasterCareItemRepository;
 import com.youin.now.master.MasterCategory;
 import com.youin.now.master.MasterCategoryRepository;
+import com.youin.now.subtract.VerdictPort;
 import com.youin.now.today.TodayAction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,9 +30,8 @@ import java.util.Map;
  * <p><b>완료한 것만 남깁니다.</b> 달성률·연속일은 만들지 않습니다 —
  * 비율을 만들면 못 한 날이 드러나고, 끊기는 순간이 부담이 되기 때문입니다.
  *
- * <p>⚠️ <b>{@code summary} 의 네 필드가 아직 비어 있습니다.</b>
- * {@code daysRecorded} · {@code topState} 는 {@code CheckinPort},
- * {@code daysSubtracted} · {@code topSubtracted} 는 {@code VerdictPort.stats()} 대기입니다.
+ * <p>⚠️ <b>{@code daysRecorded} 와 {@code topState} 가 아직 0 · null 입니다.</b>
+ * {@code CheckinPort} 대기입니다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -41,27 +43,41 @@ public class LogService {
     private static final int WEEK_DAYS = 7;
     private static final int MONTH_DAYS = 30;
 
+    /** {@code limit} 기본 30 · 최대 100 */
+    private static final int LIMIT_DEFAULT = 30;
+    private static final int LIMIT_MAX = 100;
+
     private final LogActionRepository actions;
     private final ItemPort items;
     private final MasterCategoryRepository categories;
+    private final MasterCareItemRepository careItems;
+    private final VerdictPort verdicts;
 
     public LogService(LogActionRepository actions,
                       ItemPort items,
-                      MasterCategoryRepository categories) {
+                      MasterCategoryRepository categories,
+                      MasterCareItemRepository careItems,
+                      VerdictPort verdicts) {
         this.actions = actions;
         this.items = items;
         this.categories = categories;
+        this.careItems = careItems;
+        this.verdicts = verdicts;
     }
 
     // ── NOW-LOG-001 ────────────────────────────────
 
     /**
-     * 완료한 행동을 날짜별로.
+     * 완료한 행동. <b>평평한 배열입니다</b> — 날짜별로 묶는 것은 화면이 합니다.
      *
-     * @param from 없으면 30일 전
-     * @param to   없으면 오늘
+     * @param from       없으면 30일 전
+     * @param to         없으면 오늘
+     * @param categoryId 없으면 전부. <b>없는 분류면 400</b>
+     * @param limit      1~100, 기본 30
      */
-    public LogRes.Days getLogs(String userId, String from, String to) {
+    public LogRes.Logs getLogs(String userId, String from, String to,
+                               String categoryId, Integer limit) {
+
         LocalDate toDate = (to == null || to.isBlank())
                 ? LocalDate.now(KST) : parseDate(to);
         LocalDate fromDate = (from == null || from.isBlank())
@@ -71,29 +87,40 @@ public class LogService {
             throw new ApiException(ErrorCode.VALIDATION_FAILED, "시작일이 종료일보다 늦습니다");
         }
 
-        Map<String, String> names = categoryNames();
-        Map<String, String> categoryOf = categoryIdByUserItemId(userId);
-
-        // 날짜별로 묶습니다. 최신 날짜가 먼저입니다
-        Map<LocalDate, List<LogRes.Item>> byDate = new LinkedHashMap<>();
-
-        for (TodayAction a : done(userId, fromDate, toDate)) {
-            LocalDate d = a.completedAt().atZoneSameInstant(KST).toLocalDate();
-            String categoryId = categoryOf.get(a.userItemId());
-
-            byDate.computeIfAbsent(d, k -> new ArrayList<>())
-                    .add(new LogRes.Item(
-                            a.id(),
-                            a.title(),
-                            categoryId,
-                            categoryId == null ? null : names.get(categoryId),
-                            a.startedAt() != null));
+        int max = (limit == null) ? LIMIT_DEFAULT : limit;
+        if (max < 1 || max > LIMIT_MAX) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "limit 은 1에서 100 사이입니다");
         }
 
-        List<LogRes.Day> days = new ArrayList<>();
-        byDate.forEach((d, logs) -> days.add(new LogRes.Day(d.toString(), logs)));
+        Map<String, String> names = categoryNames();
 
-        return new LogRes.Days(days);
+        if (categoryId != null && !categoryId.isBlank() && !names.containsKey(categoryId)) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "존재하지 않는 카테고리입니다");
+        }
+
+        Map<String, String> categoryOf = categoryIdByUserItemId(userId);
+
+        List<LogRes.Item> all = new ArrayList<>();
+        for (TodayAction a : done(userId, fromDate, toDate)) {
+            String cid = categoryOf.get(a.userItemId());
+
+            // 분류 필터. 분류를 못 찾은 것은 필터가 걸려 있으면 뺍니다
+            if (categoryId != null && !categoryId.isBlank() && !categoryId.equals(cid)) continue;
+
+            all.add(new LogRes.Item(
+                    a.id(),
+                    a.completedAt().atZoneSameInstant(KST).toLocalDate().toString(),
+                    cid,
+                    cid == null ? null : names.get(cid),
+                    a.title(),
+                    a.startedAt() != null));
+        }
+
+        // total 은 자르기 전 기준입니다
+        int total = all.size();
+        List<LogRes.Item> logs = all.size() > max ? List.copyOf(all.subList(0, max)) : all;
+
+        return new LogRes.Logs(logs, total, total > max);
     }
 
     // ── NOW-LOG-002 ────────────────────────────────
@@ -120,14 +147,24 @@ public class LogService {
         // 분류별 건수. 순서는 처음 나온 순입니다
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (TodayAction a : rows) {
-            String categoryId = categoryOf.get(a.userItemId());
-            String name = categoryId == null ? null : names.get(categoryId);
-            if (name == null) continue;
-            counts.merge(name, 1, Integer::sum);
+            String cid = categoryOf.get(a.userItemId());
+            if (cid == null || !names.containsKey(cid)) continue;
+            counts.merge(cid, 1, Integer::sum);
         }
 
         List<LogRes.CategoryCount> byCategory = new ArrayList<>();
-        counts.forEach((name, c) -> byCategory.add(new LogRes.CategoryCount(name, c)));
+        counts.forEach((cid, c) ->
+                byCategory.add(new LogRes.CategoryCount(cid, names.get(cid), c)));
+
+        // 덜어내기 통계는 창구로 받습니다. 이름은 안 담겨 오니 여기서 붙입니다
+        VerdictPort.Stats st = verdicts.stats(userId, fromDate, toDate);
+
+        List<LogRes.ItemCount> topSubtracted = st.topSubtracted().stream()
+                .map(x -> new LogRes.ItemCount(
+                        x.itemId(),
+                        careItems.findById(x.itemId()).map(MasterCareItem::name).orElse(null),
+                        x.count()))
+                .toList();
 
         // TODO CheckinPort 가 열리면 채웁니다 (이철희 님)
         //      daysRecorded = COUNT(DISTINCT check_date) FROM checkins
@@ -136,15 +173,9 @@ public class LogService {
         int daysRecorded = 0;
         String topState = null;
 
-        // TODO VerdictPort.stats(userId, from, to) 가 머지되면 채웁니다 (송원석 님)
-        //      → { daysSubtracted, topSubtracted: [{ itemId, count }] }
-        //      이름은 안 담겨 오니 care_items 에서 붙입니다
-        int daysSubtracted = 0;
-        List<LogRes.ItemCount> topSubtracted = List.of();
-
         return new LogRes.Summary(
                 p, rows.size(), byCategory, sentenceOf(p, byCategory),
-                daysRecorded, daysSubtracted, topState, topSubtracted);
+                daysRecorded, st.daysSubtracted(), topState, topSubtracted);
     }
 
     // ── 내부 ────────────────────────────────────────
@@ -174,7 +205,7 @@ public class LogService {
     private static String objectParticle(String word) {
         if (word == null || word.isEmpty()) return "를";
         char last = word.charAt(word.length() - 1);
-        if (last < 0xAC00 || last > 0xD7A3) return "를";        // 한글이 아니면
+        if (last < 0xAC00 || last > 0xD7A3) return "를";
         return (last - 0xAC00) % 28 == 0 ? "를" : "을";
     }
 
