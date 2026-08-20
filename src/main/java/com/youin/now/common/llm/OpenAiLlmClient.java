@@ -1,5 +1,6 @@
 package com.youin.now.common.llm;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -9,6 +10,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -40,7 +43,18 @@ public class OpenAiLlmClient implements LlmClient {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiLlmClient.class);
     private static final String URL = "https://api.openai.com/v1/chat/completions";
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    /**
+     * <b>모르는 필드가 와도 실패하지 않습니다.</b>
+     *
+     * <p>프롬프트에 「출력은 이 JSON 하나뿐」이라고 적어도 모델은 {@code level} 같은 필드를
+     * 같이 넣습니다. 2026-08-20 실서버 첫 호출이 그것 때문에 전부 폴백으로 떨어졌습니다
+     * ({@code UnrecognizedPropertyException}).
+     *
+     * <p><b>가드레일은 「우리가 그 필드를 안 읽는 것」이지 「앱이 죽는 것」이 아닙니다.</b>
+     * 받는 자리({@code CoachAnswer})에 칸이 없으니 모델이 넣어도 들어올 데가 없습니다.
+     */
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private final LlmProperties props;
     private final HttpClient http;
@@ -94,6 +108,13 @@ public class OpenAiLlmClient implements LlmClient {
             if (content == null || content.isBlank()) {
                 log.warn("LLM 응답에 본문이 없습니다 — 폴백으로 갑니다");
                 return null;
+            }
+            // 모델이 어떤 필드를 썼는지만 남깁니다. 값은 안 남깁니다 —
+            // 사용자 질문이 섞여 있을 수 있습니다. 프롬프트를 조일 때 이 줄을 봅니다
+            if (log.isInfoEnabled()) {
+                List<String> names = new ArrayList<>();
+                MAPPER.readTree(content).fieldNames().forEachRemaining(names::add);
+                log.info("LLM 응답 필드 {}", names);
             }
             return MAPPER.readValue(content, responseType);
 

@@ -6,6 +6,8 @@ import com.youin.now.common.llm.LlmClient;
 import com.youin.now.note.NoteRulePort;
 import com.youin.now.note.NoteService;
 import com.youin.now.safety.SafetyPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +33,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class CoachService {
 
+    private static final Logger log = LoggerFactory.getLogger(CoachService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
+     * 버리는 기준.
+     *
+     * <p>프롬프트는 <b>120자</b>로 적어 두었는데, 조금 넘겼다고 버리면 AI 를 켜 놓고
+     * 매번 폴백을 쓰게 됩니다. <b>진짜 위험은 125자가 아니라 답이 폭주하는 것</b>이라
+     * 버리는 선은 넉넉히 두고, 120자를 넘으면 로그만 남깁니다.
+     */
+    private static final int MAX_ANSWER = 220;
 
     private final SafetyPort safety;
     private final NoteService notes;
@@ -124,11 +136,29 @@ public class CoachService {
      * <p>브랜드명 목록이 명세에 없어서 <b>의학적 단정만</b> 걸러 냅니다. 지어내지 않았습니다.
      */
     private static boolean acceptable(String answer) {
-        if (answer == null || answer.isBlank()) return false;
-        if (answer.length() > 120) return false;                       // 프롬프트가 정한 길이
-        if (answer.contains("!") || answer.contains("！")) return false; // 느낌표 금지
-        String a = answer.replaceAll("\s", "");
-        return !containsAny(a, CoachSentences.BANNED);
+        // 왜 버렸는지 남깁니다. 안 남기면 「AI 를 켰는데 왜 rule 이지」에서 멈춥니다.
+        // 본문은 안 찍습니다 — 사용자 질문이 섞여 있을 수 있습니다
+        if (answer == null || answer.isBlank()) {
+            log.warn("코치 답 버림 — 비어 있음");
+            return false;
+        }
+        if (answer.length() > MAX_ANSWER) {
+            log.warn("코치 답 버림 — {}자 (한도 {})", answer.length(), MAX_ANSWER);
+            return false;
+        }
+        if (answer.contains("!") || answer.contains("！")) {
+            log.warn("코치 답 버림 — 느낌표");
+            return false;
+        }
+        if (containsAny(answer.replaceAll("\s", ""), CoachSentences.BANNED)) {
+            log.warn("코치 답 버림 — 금칙어");
+            return false;
+        }
+        if (answer.length() > 120) {
+            // 프롬프트는 120자인데 모델이 조금 넘길 때가 있습니다. 버리진 않고 남겨만 둡니다
+            log.info("코치 답이 120자를 넘었습니다 ({}자). 프롬프트를 조일 여지", answer.length());
+        }
+        return true;
     }
 
     /** 최대 2개 · 각 20자 */
