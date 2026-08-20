@@ -77,7 +77,8 @@ public class EvaluationResult {
     public EvaluationResult(String id, String evaluationId, String userItemId,
                             String verdict, String reason, String evidenceLevel,
                             String floor, boolean floorApplied,
-                            String excludedBy, Short noteSent, Short daysLeft) {
+                            String excludedBy, Short noteSent, Short daysLeft,
+                            boolean reverted) {
         this.id = id;
         this.evaluationId = evaluationId;
         this.userItemId = userItemId;
@@ -89,10 +90,20 @@ public class EvaluationResult {
         this.excludedBy = excludedBy;
         this.noteSent = noteSent;
         this.daysLeft = daysLeft;
+        this.reverted = reverted;
     }
 
-    /** 사용자가 되돌렸습니다. <b>부르기 전에 {@code excluded} 인지 확인하십시오.</b> */
-    public void revert() { this.reverted = true; }
+    /**
+     * 사용자가 되돌렸습니다. <b>부르기 전에 {@code excluded} 인지 확인하십시오.</b>
+     *
+     * <p>{@code verdict} 도 함께 {@code keep} 이 됩니다 — 명세서 {@code NOW-SUB-003} 이
+     * 「되돌린 뒤의 판정. <b>항상 keep</b>」이고 {@code summary} 는 「<b>갱신된</b> 건수」입니다.
+     * 표시만 바꾸고 값을 두면 {@code GET /subtract/result} 가 옛 판정을 계속 보여 줍니다.
+     */
+    public void revert() {
+        this.reverted = true;
+        this.verdict = SubtractVerdict.KEEP.code();
+    }
 
     public String id()            { return id; }
     public String evaluationId()  { return evaluationId; }
