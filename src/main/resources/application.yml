@@ -38,7 +38,16 @@ app:
   jwt:
     # ★ 실서버에서는 반드시 환경 변수로 덮으십시오 — APP_JWT_SECRET
     #   32바이트 미만이면 앱이 시작할 때 막습니다
-    secret: ${APP_JWT_SECRET:로컬전용_기본_서명키_실서버에서는_반드시_환경변수로_덮으십시오}
+    #
+    #   기본값을 고정 문자열로 두지 않습니다(2026-08-21). 저장소가 공개로 바뀌면
+    #   그 문자열이 **알려진 서명키**가 됩니다. 위 profiles.default 가 local 이라
+    #   SPRING_PROFILES_ACTIVE 를 빠뜨리면 실서버도 local 로 뜨는데,
+    #   그때 누구나 토큰을 위조해 남의 계정으로 들어올 수 있습니다.
+    #   부팅마다 새로 만들어 그 길을 막습니다.
+    #
+    #   로컬에서 재시작해도 토큰을 유지하려면 application-local.yml 에 적으십시오.
+    #   그 파일이 있으면 아래 기본값은 쓰이지 않습니다.
+    secret: ${APP_JWT_SECRET:${random.value}${random.value}}
     valid-seconds: 2592000        # 30일. 게스트가 앱을 다시 열었을 때 이어지도록
   llm:
     # 2026-08-20 OpenAI 크레딧을 쓰기로 했습니다.
