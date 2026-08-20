@@ -1,5 +1,9 @@
 package com.youin.now.note;
 
+import com.youin.now.common.error.ApiException;
+import com.youin.now.common.error.ErrorCode;
+import com.youin.now.common.id.Ids;
+import com.youin.now.safety.SafetyPort;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
@@ -33,11 +37,16 @@ public class NoteService {
     private final CareNoteLineRepository lines;
     private final CareNoteRuleRepository rules;
 
+    /** 자유 텍스트는 저장 전에 이걸 통과해야 합니다. safety/ 는 제 것이라 창구 없이 씁니다 */
+    private final SafetyPort safety;
+
     public NoteService(CareNoteRepository notes, CareNoteLineRepository lines,
-                       CareNoteRuleRepository rules) {
+                       CareNoteRuleRepository rules,
+                       SafetyPort safety) {
         this.notes = notes;
         this.lines = lines;
         this.rules = rules;
+        this.safety = safety;
     }
 
     /**
@@ -70,17 +79,104 @@ public class NoteService {
      *
      * @return 안내문이 없거나 전부 기간이 지났으면 <b>빈 목록</b>
      */
-    @Transactional(readOnly = true)
     /**
      * 안내문이 등록되어 있는가. <b>제한이 전부 풀렸어도 {@code true} 입니다.</b>
      *
      * <p>{@code activeRules} 가 빈 목록인 것과 구분해야 합니다 —
      * 안내문은 있는데 기간이 다 지난 경우가 있고, 그때도 원문은 볼 수 있어야 합니다.
      */
+    /**
+     * {@code NOW-NOTE-001} 관리 맥락 조회.
+     *
+     * <p><b>등록된 것이 없으면 빈 값입니다. 404 를 내지 않습니다</b> — 명세서 규칙입니다.
+     *
+     * <p>{@code daysLeft} 가 0 이 된 주의사항은 <b>담지 않습니다.</b> 지난 제한을 계속 보여 주면
+     * 사용자가 하지 않아도 될 것을 피하게 됩니다.
+     */
+    @Transactional(readOnly = true)
+    public CareRes careContext(String userId) {
+        return notes.findTopByUserIdOrderByReceivedAtDescCreatedAtDesc(userId)
+                .map(note -> {
+                    long passed = ChronoUnit.DAYS.between(note.receivedAt(), LocalDate.now(KST));
+                    List<CareRes.Caution> out = new ArrayList<>();
+                    for (CareNoteRule r : rules.findByCareNoteIdOrderBySentNoAsc(note.id())) {
+                        // dp 가 0 이면 기간을 모르는 것입니다. 자동 만료시키지 않습니다
+                        Integer dp = r.dp() == 0 ? null : (int) r.dp();
+                        Integer left = dp == null ? null : (int) Math.max(0, dp - passed);
+                        if (left != null && left <= 0) continue;
+                        out.add(new CareRes.Caution(
+                                r.careItemId(),
+                                r.cautionText() != null ? r.cautionText() : r.name(),
+                                r.sentNo(), dp, left));
+                    }
+                    return new CareRes(note.title(), (int) Math.max(0, passed), out, true, null);
+                })
+                .orElseGet(CareRes::empty);
+    }
+
+    /**
+     * {@code NOW-NOTE-002} 관리 맥락 저장. <b>통째로 갈아 끼웁니다.</b>
+     *
+     * <p>순서가 강제됩니다 — {@code care_note_rules} 의 외래키가
+     * {@code (care_note_id, sent_no)} 로 {@code care_note_lines} 를 가리킵니다.
+     * <b>문장을 먼저 넣어야 주의사항을 넣을 수 있습니다.</b>
+     *
+     * <p>자유 텍스트는 <b>저장 전에 위기 신호 검사를 통과해야 합니다</b> —
+     * {@code schema_v63.sql} 주석과 명세서가 둘 다 요구합니다.
+     */
+    @Transactional
+    public CareRes saveCare(String userId, CareReq req) {
+        List<String> lines = req.noteLines() == null ? List.of() : req.noteLines();
+        List<CareReq.Caution> cautions = req.cautions() == null ? List.of() : req.cautions();
+
+        // ① 위기 신호 검사 — 저장 전에 전부
+        check(req.lastType());
+        for (String line : lines) check(line);
+        for (CareReq.Caution c : cautions) check(c.text());
+
+        // ② sent 가 가리키는 문장이 있어야 합니다. 없으면 외래키에서 터집니다
+        for (CareReq.Caution c : cautions) {
+            if (c.sent() > lines.size()) {
+                throw new ApiException(ErrorCode.VALIDATION_FAILED,
+                        c.sent() + "번째 문장이 noteLines 에 없습니다");
+            }
+        }
+
+        // ③ 통째로 갈아 끼웁니다. lines · rules 는 CASCADE 로 따라 지워집니다
+        notes.deleteByUserId(userId);
+
+        String noteId = Ids.of("cn");
+        notes.save(new CareNote(noteId, userId, req.lastType(),
+                LocalDate.now(KST).minusDays(req.ago())));
+
+        short no = 1;
+        for (String line : lines) this.lines.save(new CareNoteLine(noteId, no++, line));
+
+        for (CareReq.Caution c : cautions) {
+            rules.save(new CareNoteRule(Ids.of("cnr"), noteId,
+                    c.sent().shortValue(), c.text(),
+                    c.dp() == null ? 0 : c.dp().shortValue(), c.itemId()));
+        }
+
+        CareRes saved = careContext(userId);
+        return new CareRes(saved.lastType(), saved.ago(), saved.cautions(),
+                saved.hasNote(), cautions.size());
+    }
+
+    /** 자유 텍스트는 저장 전에 반드시 통과해야 합니다. LLM 이 없는 자리라 순서 문제는 없습니다 */
+    private void check(String text) {
+        if (text == null || text.isBlank()) return;
+        if (safety.check(text, SafetyPort.Source.NOTE).blocked()) {
+            throw new ApiException(ErrorCode.TEXT_REJECTED);
+        }
+    }
+
+    @Transactional(readOnly = true)
     public boolean hasNote(String userId) {
         return notes.findTopByUserIdOrderByReceivedAtDescCreatedAtDesc(userId).isPresent();
     }
 
+    @Transactional(readOnly = true)
     public List<NoteRulePort.NoteRule> activeRules(String userId) {
         return notes.findTopByUserIdOrderByReceivedAtDescCreatedAtDesc(userId)
                 .map(note -> {
