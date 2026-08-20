@@ -32,6 +32,29 @@ public interface NoteRulePort {
     boolean hasNote(String userId);
 
     /**
+     * 홈의 {@code care} 블록. <b>{@code NOW-HOME-001} 이 「NOW-NOTE-001 과 같은 구조」로 정했습니다.</b>
+     *
+     * <p>{@code docs/04-ports.md} 의 8/20 정정은 {@code care/} 를 김민정 님 소유로 보고
+     * 「창구를 열 이유가 없다」고 했는데, <b>그 뒤 제가 {@code NOW-NOTE-001} · {@code 002} 를 가져왔습니다</b>
+     * (2026-08-20 20:00). 담당이 갈렸으니 창구가 필요합니다.
+     *
+     * <p><b>등록된 것이 없으면 빈 값입니다. {@code null} 이 아닙니다</b> —
+     * 홈이 그대로 실어 보내면 명세의 「care: object (null 허용)」과 맞습니다.
+     * 비었는지는 {@code hasNote} 로 보십시오.
+     */
+    CareContext careForHome(String userId);
+
+    /**
+     * @param cautions <b>오늘 살아 있는 것만.</b> {@code daysLeft} 가 0 이 된 것은 담기지 않습니다
+     * @param hasNote  안내문 보유 여부. <b>{@code cautions} 가 비어도 {@code true} 일 수 있습니다</b>
+     */
+    record CareContext(String lastType, Integer ago,
+                       List<Caution> cautions, boolean hasNote) {}
+
+    /** 홈이 그대로 실어 보낼 모양입니다. {@code NOW-HOME-001} 의 {@code care.cautions[]} 와 같습니다 */
+    record Caution(String itemId, String text, int sent, Integer daysLeft) {}
+
+    /**
      * @param sentenceNo  안내문 원문 문장 번호. 화면에서 원문으로 이동할 때 씁니다
      * @param daysPeriod  안내문이 정한 제한 기간(일)
      * @param name        짧은 라벨. 「문지르는 세안」 같은 것 (GET /me/care/note 의 rules[].name)
