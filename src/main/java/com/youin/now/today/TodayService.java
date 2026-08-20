@@ -212,15 +212,26 @@ public class TodayService {
     @Transactional(readOnly = true)
     public ForHome todayForHome(String userId) {
         return actions.findByUserIdAndExpiresAtAfter(userId, OffsetDateTime.now(KST))
-                .map(a -> new ForHome(
-                        a.id(), a.title(), a.durationSec(),
-                        a.status(), a.rank(), a.totalCandidates()))
+                .map(a -> {
+                    MasterCareItem m = masterOf(userId, a);
+                    return new ForHome(
+                            a.id(), a.title(), a.durationSec(),
+                            a.status(), a.rank(), a.totalCandidates(),
+                            m == null ? null : m.categoryId());
+                })
                 .orElse(null);
     }
 
-    /** 홈이 그대로 실어 보낼 모양입니다. {@code NOW-HOME-001} 의 {@code today} 블록 */
+    /**
+     * 홈이 그대로 실어 보낼 모양입니다. {@code NOW-HOME-001} 의 {@code today} 블록.
+     *
+     * <p><b>{@code categoryId} 는 명세에 없는 필드입니다.</b> 첫 발자국 카드를 고를 때
+     * 「오늘의 케어와 같은 카테고리를 우선」(규칙 2)에 쓰려고 담습니다.
+     * 더 주는 것은 화면을 깨뜨리지 않습니다.
+     */
     public record ForHome(String actionId, String title, int durationSec,
-                          String status, short rank, short totalCandidates) { }
+                          String status, short rank, short totalCandidates,
+                          String categoryId) { }
 
     // ── 내부 ────────────────────────────────────────
 

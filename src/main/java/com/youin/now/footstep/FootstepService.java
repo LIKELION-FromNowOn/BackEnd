@@ -81,20 +81,30 @@ public class FootstepService {
      * 홈의 「첫 발자국 카드」 조각. <b>네 칸입니다</b> —
      * {@code docs/04-ports.md} 의 「id 만」은 낡았고 명세가 앞섭니다.
      *
+     * <p><b>오늘의 케어와 같은 카테고리를 우선합니다</b> ({@code NOW-HOME-001} 처리 규칙 2).
+     * 「우선해」이므로 같은 것이 없으면 폴백입니다 — {@code care} 와 {@code med} 는
+     * 사례가 아예 없어 항상 폴백을 탑니다.
+     *
      * <p><b>추천 중단 상태에서는 홈이 이것을 부르지 않습니다.</b>
      * 아무것도 안 해도 되는 날에 남의 사례를 보여 주면 부담이 됩니다.
      *
+     * @param preferCategoryId 오늘의 케어 카테고리. 오늘 행동이 없으면 {@code null}
      * @return 사례가 없으면 {@code null}
      */
-    public ForHome footstepForHome(String userId) {
+    public ForHome footstepForHome(String userId, String preferCategoryId) {
         List<FootstepEntity> all = footsteps.findAllByOrderByIdAsc();
         if (all.isEmpty()) return null;
 
-        // 온보딩 것 중 첫 번째. 없으면 목록 첫 번째
-        FootstepEntity picked = all.stream()
+        // 온보딩 것 중에서 고릅니다. 온보딩이 하나도 없으면 전체에서
+        List<FootstepEntity> onboarding = all.stream()
                 .filter(e -> Boolean.TRUE.equals(e.getIsOnboarding()))
+                .toList();
+        List<FootstepEntity> pool = onboarding.isEmpty() ? all : onboarding;
+
+        FootstepEntity picked = pool.stream()
+                .filter(e -> e.getCategoryId().equals(preferCategoryId))
                 .findFirst()
-                .orElse(all.get(0));
+                .orElse(pool.get(0));       // 같은 카테고리가 없으면 첫 번째
 
         return new ForHome(picked.getId(), picked.getCategoryId(),
                 picked.getSituation(), picked.getFirstStep());

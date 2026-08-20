@@ -87,9 +87,14 @@ public class HomeService {
 
         var todayCard = todayService.todayForHome(userId);
 
-        // 추천 중단이면 첫 발자국 카드를 내립니다 —
-        // 아무것도 안 해도 되는 날에 남의 사례를 보여 주면 부담이 됩니다 (규칙 3)
-        var footstepCard = paused ? null : footstepService.footstepForHome(userId);
+        // 추천 중단이면 첫 발자국 카드를 내립니다 (규칙 3) —
+        // 아무것도 안 해도 되는 날에 남의 사례를 보여 주면 부담이 됩니다
+        //
+        // 오늘의 케어와 같은 카테고리를 우선합니다 (규칙 2).
+        // 오늘 행동이 없으면 null 을 넘겨 폴백을 태웁니다
+        var footstepCard = paused ? null
+                : footstepService.footstepForHome(
+                userId, todayCard == null ? null : todayCard.categoryId());
 
         // TODO CheckinPort.stats 가 열리면 채웁니다 (이철희 님)
         //      recordedDays = COUNT(DISTINCT check_date) FROM checkins
