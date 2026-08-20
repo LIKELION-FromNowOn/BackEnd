@@ -1,8 +1,9 @@
 package com.youin.now.master;
 
 import com.youin.now.checkin.SignalWeightPort;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 
@@ -32,12 +33,17 @@ public class SignalWeightAdapter implements SignalWeightPort {
     }
 
     @Override
-    public Map<String, Integer> weights(Set<String> signalIds) {
-        if (signalIds == null || signalIds.isEmpty()) return Map.of();
-        Map<String, Integer> out = new HashMap<>();
+    public List<SignalInfo> find(Set<String> signalIds) {
+        if (signalIds == null || signalIds.isEmpty()) return List.of();
+        List<SignalInfo> out = new ArrayList<>();
         for (MasterSignal s : signals.findByIdIn(signalIds)) {
-            out.put(s.id(), (int) s.weight());
+            out.add(new SignalInfo(s.id(), s.name(), s.weight()));
         }
+        // 가중치 큰 것부터. 같으면 화면 순서대로.
+        // 정렬을 정해 두지 않으면 DB 가 돌려주는 순서에 따라 근거 문구 순서가 흔들립니다 —
+        // 명세서 처리 규칙 5번 「같은 입력에는 항상 같은 결과」에 어긋납니다
+        out.sort(Comparator.comparingInt(SignalInfo::weight).reversed()
+                .thenComparing(SignalInfo::id));
         return out;
     }
 }
