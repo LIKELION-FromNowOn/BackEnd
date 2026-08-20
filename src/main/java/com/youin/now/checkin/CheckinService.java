@@ -6,7 +6,9 @@ import com.youin.now.common.id.Ids;
 import com.youin.now.safety.SafetyPort;
 import com.youin.now.subtract.SubtractCondition;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,6 +42,9 @@ public class CheckinService {
     /** 직접 적은 징후 하나당 점수. 명세서 처리 규칙 1번 */
     private static final int CUSTOM_SIGNAL_SCORE = 2;
 
+    /** 거절 뒤 같은 신호 조합을 다시 제안하지 않는 기간. 2026-08-20 송원석 결정. */
+    private static final long REPROPOSAL_COOLDOWN_DAYS = 3;
+
     /** 날짜 경계는 KST 자정입니다. 서버 시간대로 계산하지 않습니다. */
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
@@ -47,13 +52,16 @@ public class CheckinService {
     private final CheckinSignalRepository signals;
     private final SignalWeightPort weights;
     private final SafetyPort safety;
+    private final CheckinStateTransitionRepository transitions;
 
     public CheckinService(CheckinRepository checkins, CheckinSignalRepository signals,
-                          SignalWeightPort weights, SafetyPort safety) {
+                          SignalWeightPort weights, SafetyPort safety,
+                          CheckinStateTransitionRepository transitions) {
         this.checkins = checkins;
         this.signals = signals;
         this.weights = weights;
         this.safety = safety;
+        this.transitions = transitions;
     }
 
     @Transactional
@@ -98,7 +106,7 @@ public class CheckinService {
         }
         signals.saveAll(rows);
 
-        boolean proposed = signalScore >= THRESHOLD;
+        boolean proposed = createProposalIfEligible(userId, condition, signalScore);
 
         return new CheckinRes(
                 checkin.id(),
@@ -122,6 +130,48 @@ public class CheckinService {
     @Transactional(readOnly = true)
     public Optional<Checkin> latest(String userId) {
         return checkins.findTopByUserIdOrderByCheckDateDesc(userId);
+    }
+
+    /** 전환 제안을 수락하면 상태와 추천 중단 여부를 갱신하고, 거절하면 3일 유예를 계산해 반환합니다. */
+    @Transactional
+    public CheckinTransitionRes respondTransition(String userId, CheckinTransitionReq req) {
+        if (req.checkinId() == null || req.checkinId().isBlank() || req.accept() == null) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED);
+        }
+        Checkin checkin = checkins.findByIdAndUserId(req.checkinId(), userId)
+                .orElseThrow(() -> new ApiException(ErrorCode.CHECKIN_NOT_FOUND));
+        CheckinStateTransition transition = transitions.findTopByUserIdAndAcceptedIsNullOrderByCreatedAtDesc(userId)
+                .filter(t -> t.fromState().equals(checkin.state()) && checkin.signalScore() >= THRESHOLD)
+                .orElseThrow(() -> new ApiException(ErrorCode.NO_PROPOSAL));
+
+        OffsetDateTime respondedAt = OffsetDateTime.now(KST);
+        boolean accepted = req.accept();
+        transition.respond(accepted, respondedAt);
+        if (accepted) {
+            SubtractCondition target = SubtractCondition.of(transition.toState());
+            checkin.transitionTo(target.code(), target.judgeStrength());
+            boolean paused = target.recommendationPaused();
+            transitions.updateRecommendationPaused(userId, paused);
+            return new CheckinTransitionRes(target.code(), true, paused, true, null);
+        }
+        String blockedUntil = respondedAt.plusDays(REPROPOSAL_COOLDOWN_DAYS)
+                .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        return new CheckinTransitionRes(checkin.state(), false, false, null, blockedUntil);
+    }
+
+    private boolean createProposalIfEligible(String userId, SubtractCondition condition, short signalScore) {
+        if (signalScore < THRESHOLD) {
+            transitions.deleteByUserIdAndAcceptedIsNull(userId);
+            return false;
+        }
+        if (transitions.findTopByUserIdAndAcceptedIsNullOrderByCreatedAtDesc(userId).isPresent()) return true;
+        boolean blocked = transitions.findTopByUserIdAndAcceptedFalseAndRespondedAtIsNotNullOrderByRespondedAtDesc(userId)
+                .map(t -> t.respondedAt().plusDays(REPROPOSAL_COOLDOWN_DAYS).isAfter(OffsetDateTime.now(KST)))
+                .orElse(false);
+        if (blocked) return false;
+        transitions.save(new CheckinStateTransition(Ids.of("st"), userId, condition.code(),
+                proposedState(condition).code(), signalScore));
+        return true;
     }
 
     /**

@@ -71,6 +71,12 @@ public class Checkin {
         this.signalScore = signalScore;
     }
 
+    /** 전환 제안을 수락한 경우에만 상태를 한 단계 바꿉니다. */
+    public void transitionTo(String state, String judgeStrength) {
+        this.state = state;
+        this.judgeStrength = judgeStrength;
+    }
+
     public String id()             { return id; }
     public String userId()         { return userId; }
     public LocalDate checkDate()   { return checkDate; }
