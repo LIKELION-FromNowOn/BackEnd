@@ -1,0 +1,114 @@
+# 공통 설정. 접속 정보·키는 여기에 적지 마십시오.
+# 로컬 값은 application-local.yml 에 두고, 그 파일은 .gitignore 에 이미 있습니다.
+
+spring:
+  application:
+    name: now
+  profiles:
+    default: local
+  jpa:
+    hibernate:
+      ddl-auto: validate        # 스키마는 사람이 만듭니다. 앱이 테이블을 바꾸지 않습니다
+    properties:
+      hibernate:
+        format_sql: true
+        # ★ 2026-08-20 추가. 빠뜨리면 시각이 9시간 어긋납니다.
+        #
+        #   DB 의 DATETIME(6) 에는 시간대가 없습니다. MySQL 이 CURRENT_TIMESTAMP(6) 로
+        #   KST 를 적어 넣는데, 이 값이 없으면 하이버네이트가 그것을 UTC 로 읽습니다.
+        #   09:49 KST 로 저장된 것이 09:49Z(=18:49 KST)로 나갔습니다.
+        #   화면의 「방금」이 9시간 뒤 미래로 보입니다.
+        jdbc:
+          time_zone: Asia/Seoul
+        # 하이버네이트 6은 OffsetDateTime 을 기본(DEFAULT=NORMALIZE_UTC)으로 UTC 정규화하면서
+        # 위 jdbc.time_zone 을 무시합니다. NORMALIZE 로 두어야 그 값을 실제로 씁니다.
+        timezone:
+          default_storage: NORMALIZE
+    open-in-view: false         # 컨트롤러에서 지연 로딩이 터지는 것을 막습니다
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1       # 명세서의 {BASE_URL}/api/v1 과 맞춥니다
+
+app:
+  cors:
+    # 프론트 배포 주소를 여기에. 빠뜨리면 화면에서 API 가 전부 실패합니다
+    origins: http://localhost:5173
+  jwt:
+    # ★ 실서버에서는 반드시 환경 변수로 덮으십시오 — APP_JWT_SECRET
+    #   32바이트 미만이면 앱이 시작할 때 막습니다
+    #
+    #   기본값을 고정 문자열로 두지 않습니다(2026-08-21). 저장소가 공개로 바뀌면
+    #   그 문자열이 **알려진 서명키**가 됩니다. 위 profiles.default 가 local 이라
+    #   SPRING_PROFILES_ACTIVE 를 빠뜨리면 실서버도 local 로 뜨는데,
+    #   그때 누구나 토큰을 위조해 남의 계정으로 들어올 수 있습니다.
+    #   부팅마다 새로 만들어 그 길을 막습니다.
+    #
+    #   로컬에서 재시작해도 토큰을 유지하려면 application-local.yml 에 적으십시오.
+    #   그 파일이 있으면 아래 기본값은 쓰이지 않습니다.
+    secret: ${APP_JWT_SECRET:${random.value}${random.value}}
+    valid-seconds: 2592000        # 30일. 게스트가 앱을 다시 열었을 때 이어지도록
+  llm:
+    # 2026-08-20 OpenAI 크레딧을 쓰기로 했습니다.
+    #
+    # ★ 키가 비어 있어도 앱은 정상적으로 뜹니다. 이건 의도입니다 —
+    #   호출이 실패하면 폴백 문장으로 채우게 되어 있어서, 키가 없으면
+    #   그냥 처음부터 폴백으로 갑니다. generatedBy 에 fallback 이 남습니다.
+    #   DB 접속 정보와 달리 「없으면 실패」로 두지 않는 이유가 이것입니다.
+    api-key: ${FROMNOWON_OPENAI_API_KEY:}
+    model:   ${FROMNOWON_OPENAI_MODEL:gpt-5.6-luna}
+    # 호출 규약은 docs/prompts/00-index.md 와 같습니다.
+    # 2026-08-20 실측으로 6초 -> 10초, 재시도 1회 -> 0회로 바꿨습니다.
+    #   실측에서 세 추론 단계 모두 6초를 넘었고(6.06~6.45초 평균),
+    #   타임아웃만 늘리면 재시도 때문에 최악이 20초가 되어 재시도를 뺐습니다.
+    #   최악 대기가 12초에서 10초로 오히려 짧아집니다.
+    timeout-seconds: 10
+    max-retries: 0
+    # 대가가 0.39초뿐이고 편차가 가장 작았습니다. 자리마다 다르게 줄 수 있습니다.
+    reasoning-effort: low
+
+---
+# local — 각자 PC 의 MySQL 을 씁니다. H2 는 2026-08-18 에 제거했습니다.
+#
+# ★ 실행 전에 세 가지가 준비돼 있어야 합니다
+#   1. 로컬에 MySQL 8.0.16 이상이 떠 있을 것
+#   2. fromnowon_db 를 만들고 docs/schema_v63.sql 을 적용해 두었을 것
+#   3. application-local.yml 에 접속 정보를 적어 두었을 것 (.gitignore 대상)
+#      → 없으면 application-local.yml.example 을 복사해서 쓰십시오
+#
+# ddl-auto 는 위쪽 공통 설정의 validate 를 그대로 씁니다.
+# 앱이 시작할 때 엔티티와 실제 테이블이 맞는지 대조합니다 —
+# 어긋나면 서버가 아니라 여기서 먼저 걸립니다. 그게 이 설정의 목적입니다.
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    # 접속 정보는 application-local.yml 에 적습니다. 여기에 적지 마십시오
+    url: ${DB_URL:jdbc:mysql://localhost:3306/fromnowon_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+
+---
+# prod — 실서버. ★ 값을 하나도 기본값으로 두지 않았습니다.
+#
+# 환경 변수가 빠지면 앱이 「조용히 잘못된 상태로 뜨는」 대신 곧바로 실패합니다.
+# 그게 의도입니다 — 기본값을 두면 DB 없이 뜨거나 공개된 서명 키로 도는 것을
+# 발표 직전까지 아무도 모릅니다.
+#
+# ★ 실행할 때 SPRING_PROFILES_ACTIVE=prod 를 반드시 지정하십시오.
+#   빠뜨리면 위쪽 profiles.default 에 따라 local 로 떠서 엉뚱한 DB 를 봅니다.
+#   기동 로그에 The following 1 profile is active: "prod" 가 찍히는지 확인하십시오.
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+app:
+  cors:
+    origins: ${CORS_ORIGINS}
+  jwt:
+    secret: ${APP_JWT_SECRET}
