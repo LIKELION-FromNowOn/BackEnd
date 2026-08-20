@@ -42,4 +42,33 @@ public interface EvaluationResultRepository extends JpaRepository<EvaluationResu
              where e.user_id = :userId and er.reverted = true
             """, nativeQuery = true)
     List<String> findRevertedItemIds(@Param("userId") String userId);
+
+    /**
+     * 자주 덜어낸 항목. <b>{@code keep} 과 {@code excluded} 는 세지 않습니다</b> —
+     * 그대로 둔 것과 앱이 판단하지 않은 것은 「덜어냈다」가 아닙니다.
+     *
+     * <p><b>되돌린 것도 빠집니다.</b> {@code revert} 가 {@code verdict} 를 {@code keep} 으로 바꾸므로
+     * 조건에서 자연히 제외됩니다 — 사용자가 되돌렸으면 덜어낸 것이 아닙니다.
+     *
+     * <p>{@code user_items} 는 {@code item/} 소유지만 {@code evaluation_results.user_item_id} 가
+     * 외래키로 가리키는 한 단계라 함께 읽습니다. <b>{@code care_items} 까지는 안 갑니다</b> —
+     * 이름은 {@code master/} 소유라 김민정 님이 붙이십니다.
+     */
+    @Query(value = """
+            select coalesce(ui.care_item_id, ui.id) as itemId, count(*) as cnt
+              from evaluation_results er
+              join evaluations e  on e.id  = er.evaluation_id
+              join user_items  ui on ui.id = er.user_item_id
+             where e.user_id = :userId
+               and er.verdict in ('simplify', 'reduce', 'skip')
+               and (:from is null or e.created_at >= :from)
+               and (:to   is null or e.created_at <  :to)
+             group by itemId
+             order by cnt desc
+            """, nativeQuery = true)
+    List<TopRow> findTopSubtracted(@Param("userId") String userId,
+                                   @Param("from") java.time.OffsetDateTime from,
+                                   @Param("to") java.time.OffsetDateTime to);
+
+    interface TopRow { String getItemId(); int getCnt(); }
 }
