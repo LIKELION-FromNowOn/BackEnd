@@ -17,6 +17,17 @@
 
 ---
 
+## 2026-08-20 · FeHee · item · auth · checkin
+
+- 한 것: NOW-ITEM-001~004 관리 항목 조회·저장·직접 입력·삭제 구현
+- 한 것: NOW-AUTH-002~005 · NOW-MY-001 이메일 비밀번호 회원가입·로그인·로그아웃·내 정보·프로필 수정 구현
+- 한 것: NOW-STATE-003 `POST /state/transition` 구현 — 수락·거절, 재판정 요청, 거절 뒤 3일 재제안 유예
+- 공통: 인증·상태 전환 오류 코드, 잘못된 쿼리 파라미터의 400 처리 추가
+- 확인: 로컬 MySQL에서 회원 전환 데이터 집계, 로그인·프로필 수정, 상태 전환 수락·거절·실패 코드를 실제 API로 검증
+- 남은 것: 로그인 `RATE_LIMITED`의 호출 횟수·기간 기준이 미확정
+- 막힌 것: 없음
+- 브랜치: feature/item-FeHee · feature/auth-FeHee · feature/checkin-FeHee → develop 머지 완료
+
 ## 2026-08-18 15:00~17:45 · claude · DB (MySQL 전환)
 
 - 한 것: **PostgreSQL → MySQL 8.0.16+ 전환**. 팀이 다룰 수 있는 DB 를 쓰기로 한 결정에 따른 것입니다
