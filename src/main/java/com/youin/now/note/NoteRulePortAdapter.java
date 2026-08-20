@@ -25,4 +25,9 @@ public class NoteRulePortAdapter implements NoteRulePort {
     public List<NoteRule> activeRules(String userId) {
         return noteService.activeRules(userId);
     }
+
+    @Override
+    public boolean hasNote(String userId) {
+        return noteService.hasNote(userId);
+    }
 }

@@ -23,13 +23,24 @@ public interface NoteRulePort {
     List<NoteRule> activeRules(String userId);
 
     /**
+     * 이 사용자에게 <b>안내문이 등록되어 있는가.</b>
+     *
+     * <p>{@code activeRules} 가 비어 있는 것과 다릅니다 — <b>안내문은 있는데 제한이 전부 풀린 경우</b>가
+     * 있습니다. 그때도 화면은 「안내문 있음」으로 보여야 원문을 다시 볼 수 있습니다.
+     * {@code NOW-NOTE-001} 의 {@code hasNote} 가 이 값입니다.
+     */
+    boolean hasNote(String userId);
+
+    /**
      * @param sentenceNo  안내문 원문 문장 번호. 화면에서 원문으로 이동할 때 씁니다
      * @param daysPeriod  안내문이 정한 제한 기간(일)
-     * @param name        화면에 보여 줄 규칙 이름
+     * @param name        짧은 라벨. 「문지르는 세안」 같은 것 (GET /me/care/note 의 rules[].name)
+     * @param text        <b>화면에 그대로 보여 줄 문장.</b> 「3일간 각질·고기능성 관리는 피해 주세요」
+     *                    조립하지 않습니다 — {@code PUT /me/care} 가 받은 값을 그대로 냅니다
      * @param keywords    이 규칙이 걸리는 키워드
      * @param itemId      직접 연결된 관리 항목 id. 없으면 null
      * @param daysLeft    읽는 시점에 계산된 남은 일수. <b>저장값이 아닙니다</b>
      */
-    record NoteRule(int sentenceNo, int daysPeriod, String name,
+    record NoteRule(int sentenceNo, int daysPeriod, String name, String text,
                     List<String> keywords, String itemId, int daysLeft) {}
 }
