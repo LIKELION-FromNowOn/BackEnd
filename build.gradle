@@ -26,6 +26,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.security:spring-security-crypto'
 
     // 2026-08-18 PostgreSQL → MySQL. 팀이 다룰 수 있는 DB 를 씁니다.
     // H2 는 같은 날 제거했습니다 — 로컬도 실서버와 같은 MySQL 을 씁니다.
