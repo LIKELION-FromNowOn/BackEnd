@@ -74,4 +74,33 @@ public class FootstepService {
 
         return new FootstepListRes(items, onboardingIds, total);
     }
+
+    // ── 홈 조각 ────────────────────────────────────
+
+    /**
+     * 홈의 「첫 발자국 카드」 조각. <b>네 칸입니다</b> —
+     * {@code docs/04-ports.md} 의 「id 만」은 낡았고 명세가 앞섭니다.
+     *
+     * <p><b>추천 중단 상태에서는 홈이 이것을 부르지 않습니다.</b>
+     * 아무것도 안 해도 되는 날에 남의 사례를 보여 주면 부담이 됩니다.
+     *
+     * @return 사례가 없으면 {@code null}
+     */
+    public ForHome footstepForHome(String userId) {
+        List<FootstepEntity> all = footsteps.findAllByOrderByIdAsc();
+        if (all.isEmpty()) return null;
+
+        // 온보딩 것 중 첫 번째. 없으면 목록 첫 번째
+        FootstepEntity picked = all.stream()
+                .filter(e -> Boolean.TRUE.equals(e.getIsOnboarding()))
+                .findFirst()
+                .orElse(all.get(0));
+
+        return new ForHome(picked.getId(), picked.getCategoryId(),
+                picked.getSituation(), picked.getFirstStep());
+    }
+
+    /** 홈이 그대로 실어 보낼 모양입니다. {@code NOW-HOME-001} 의 {@code footstepCard} 블록 */
+    public record ForHome(String id, String categoryId,
+                          String situation, String firstStep) { }
 }
