@@ -51,6 +51,7 @@
 | 42 | claude | **`common/` 에 파일 셋을 넣으면서 슬랙 공지를 빠뜨렸습니다.** `[문]` `docs/02-roles.md:25` — **「`common/` 을 고치실 분은 슬랙 `backend` 에 먼저 올려 주십시오」**. `[측]` 제가 넣은 것 — `common/llm/OpenAiLlmClient` · `LlmProperties` · `LlmConfig` (`8f04b51`). **올리지 않았습니다.** 근거로 삼은 `REQUESTS #18` 의 「송원석 소유」가 제가 확인 없이 쓴 문장이었습니다(#18 정정). ⚠️ **`common/` 은 셋이 쓰는 유일한 공유 지점**이라 한 사람이어야 한다고 `docs/02-roles.md:36` 이 적고 있습니다. **되돌릴지, 그대로 두고 소유를 정리할지 이철희 님이 정하십니다.** 기존 파일은 안 건드렸고 **새 파일 셋만 넣었습니다** — 지우면 그대로 원상복구됩니다 | 이철희 · 코워크 |
 | 43 | FeHee | ~~**`NOW-ITEM-002`의 요청·응답 JSON 계약이 저장소에 없습니다.**~~ **2026-08-20 해소.** 노션 명세 확인 — 요청은 `{ "items": [{ "itemId", "frequency" }] }`, 3개 이상 일괄 저장이고 성공은 `{ "saved", "needsRejudge": true }`입니다. | 해소 |
 | 44 | FeHee | ~~**`NOW-ITEM-002`가 검증해야 할 `care_items` 모델이 아직 `develop`에 없습니다.**~~ **2026-08-20 해소.** `item/`에 마스터 엔티티를 복제하거나 다른 패키지 Repository를 호출하지 않고, `ItemUserItemRepository`의 읽기 전용 네이티브 조회로 항목 존재·빈도 가능 여부를 검증하고 `ItemPort` 조인도 처리했습니다. `./gradlew.bat compileJava` 성공. 마스터 PR이 머지돼도 엔티티·빈 중복이 생기지 않습니다. | 해소 |
+| 45 | FeHee | **직접 입력 항목의 카테고리를 영속할 위치가 없습니다.** `user_items`에는 `custom_name`·`frequency`만 있고, `NOW-ITEM-003`이 LLM으로 추출하는 `category`·`evidenceLevel`·`interpretedBy` 컬럼은 없습니다. 지금 `ItemPortAdapter` 조회의 `coalesce(ci.category_id, 'life')`는 직접 입력을 항상 life로 읽게 되어 실제 LLM 분류값을 잃습니다. `POST /me/items/custom`과 `GET /me/items`를 명세대로 맞추려면 컬럼 추가 또는 별도 테이블의 결정이 필요합니다. | 이철희 · 코워크 |
 
 ### #4 상세 — Gradle 워커 argfile 인코딩
 

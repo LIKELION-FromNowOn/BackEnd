@@ -29,4 +29,6 @@ public class ItemUserItem {
         this.frequency = frequency;
         this.custom = false;
     }
+
+    public String id() { return id; }
 }
