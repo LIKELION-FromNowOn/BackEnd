@@ -9,6 +9,8 @@ import com.youin.now.note.NoteRulePort;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -82,6 +84,11 @@ public class SubtractService {
             throw new ApiException(ErrorCode.MIN_ITEMS_REQUIRED);
         }
 
+        // 지금까지 되돌린 항목. NOW-SUB-003 의 persisted 약속을 여기서 지킵니다 —
+        // 2026-08-20 까지 아래 SubtractItem 마지막 인자에 false 가 박혀 있어서,
+        // persisted: true 라고 응답하고도 다음 판정에서 그 항목을 다시 판정했습니다.
+        Set<String> revertedIds = new HashSet<>(results.findRevertedItemIds(userId));
+
         // itemId -> 마스터 정보. 응답에 name · evidenceLevel · frequency 를 실을 때 씁니다
         Map<String, ItemPort.SelectedItem> master = new LinkedHashMap<>();
         List<SubtractItem> selected = new ArrayList<>();
@@ -99,7 +106,7 @@ public class SubtractService {
                     s.evidenceLevel() == 0,
                     s.frequency() != null,
                     SubtractFrequency.ofOrNull(s.frequency()),
-                    false));
+                    revertedIds.contains(s.itemId())));
         }
 
         // ③ 오늘 살아 있는 클리닉 제한
@@ -145,7 +152,10 @@ public class SubtractService {
                     r.floor().code(), r.floorApplied(),
                     r.excludedBy(),
                     r.noteSent() == null ? null : r.noteSent().shortValue(),
-                    r.daysLeft() == null ? null : r.daysLeft().shortValue()));
+                    r.daysLeft() == null ? null : r.daysLeft().shortValue(),
+                    // 되돌린 표시를 새 행에도 옮깁니다. 안 옮기면 재판정 한 번에
+                    // 되돌리기 기록이 지워지고 persisted 약속이 그날로 끝납니다
+                    r.reverted()));
         }
         results.saveAll(rows);
 
