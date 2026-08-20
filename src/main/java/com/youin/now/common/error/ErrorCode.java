@@ -37,6 +37,12 @@ public enum ErrorCode {
     CANNOT_REVERT_EXCLUDED   (HttpStatus.CONFLICT,  "이 항목은 되돌릴 수 없습니다"),
     RECOMMENDATION_PAUSED    (HttpStatus.CONFLICT,  "지금은 추천을 멈춘 상태입니다"),
 
+    // 오늘의 행동
+    ACTION_NOT_FOUND  (HttpStatus.NOT_FOUND,        "행동을 찾을 수 없습니다"),
+    REROLL_LIMIT      (HttpStatus.TOO_MANY_REQUESTS,"오늘은 더 바꿀 수 없습니다"),
+    ALREADY_COMPLETED (HttpStatus.CONFLICT,         "이미 완료한 행동은 바꿀 수 없습니다"),
+    NO_EVALUATION     (HttpStatus.CONFLICT,         "덜어내기를 먼저 진행해 주세요"),
+
     // AI
     LLM_UNAVAILABLE (HttpStatus.SERVICE_UNAVAILABLE, "기본값으로 처리했습니다"),
     TEXT_REJECTED   (HttpStatus.BAD_REQUEST,         "응답을 다시 생성했습니다");
