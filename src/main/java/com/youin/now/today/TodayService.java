@@ -77,7 +77,6 @@ public class TodayService {
      *
      * <p><b>판정이 없으면 409 {@code NO_EVALUATION} 입니다.</b> 「후보가 없어서 없다」와
      * 「판정을 아직 안 했다」는 화면에서 다르게 처리해야 합니다.
-     * 앞의 것만 첫 발자국 카드로 갑니다.
      *
      * @return 후보가 없으면 {@code null} — 첫 발자국 카드로 넘깁니다
      */
@@ -198,6 +197,30 @@ public class TodayService {
 
         return new TodayRes.Reject(true, reason);
     }
+
+    // ── 홈 조각 ────────────────────────────────────
+
+    /**
+     * 홈의 「오늘의 케어」 조각. <b>{@code docs/04-ports.md} 규약</b> —
+     * 각 패키지가 홈에 줄 조각을 스스로 만들고 {@code HomeService} 는 모으기만 합니다.
+     *
+     * <p><b>홈은 읽기 전용입니다.</b> 여기서 오늘의 행동을 새로 만들지 않습니다 —
+     * {@link #getOrCreate} 와 다른 점입니다.
+     *
+     * @return 오늘 행동이 없으면 {@code null}. 홈은 카드를 안 띄우면 됩니다
+     */
+    @Transactional(readOnly = true)
+    public ForHome todayForHome(String userId) {
+        return actions.findByUserIdAndExpiresAtAfter(userId, OffsetDateTime.now(KST))
+                .map(a -> new ForHome(
+                        a.id(), a.title(), a.durationSec(),
+                        a.status(), a.rank(), a.totalCandidates()))
+                .orElse(null);
+    }
+
+    /** 홈이 그대로 실어 보낼 모양입니다. {@code NOW-HOME-001} 의 {@code today} 블록 */
+    public record ForHome(String actionId, String title, int durationSec,
+                          String status, short rank, short totalCandidates) { }
 
     // ── 내부 ────────────────────────────────────────
 

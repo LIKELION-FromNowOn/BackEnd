@@ -30,4 +30,9 @@ public class NoteRulePortAdapter implements NoteRulePort {
     public boolean hasNote(String userId) {
         return noteService.hasNote(userId);
     }
+
+    @Override
+    public CareContext careForHome(String userId) {
+        return noteService.careForHome(userId);
+    }
 }

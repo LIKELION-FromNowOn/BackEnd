@@ -122,4 +122,38 @@ public class VerdictPortAdapter implements VerdictPort {
         for (ItemPort.SelectedItem s : items.selected(userId)) m.put(s.userItemId(), s.itemId());
         return m;
     }
+
+    /**
+     * {@code NOW-LOG-002} 의 {@code daysSubtracted} · {@code topSubtracted}.
+     *
+     * <p>이름은 안 담습니다 — {@code care_items} 는 {@code master/} 소유입니다.
+     */
+    @Override
+    public Stats stats(String userId, LocalDate from, LocalDate to) {
+        OffsetDateTime f = from == null ? null : from.atStartOfDay(KST).toOffsetDateTime();
+        OffsetDateTime t = to == null ? null : to.plusDays(1).atStartOfDay(KST).toOffsetDateTime();
+
+        List<TopItem> top = new ArrayList<>();
+        for (EvaluationResultRepository.TopRow r : results.findTopSubtracted(userId, f, t)) {
+            top.add(new TopItem(r.getItemId(), r.getCnt()));
+        }
+        return new Stats(evaluations.countSubtractedDays(userId, f, t), top);
+    }
+
+    /**
+     * 홈의 {@code subtract} 블록. <b>그날 판정이 없으면 {@code null} 입니다.</b>
+     *
+     * <p>{@code removedCount} 는 {@code reduce + skip} 입니다.
+     * {@code simplify} 는 방식만 바꾼 것이라 걷어낸 수에 안 넣습니다.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public HomeSubtract subtractForHome(String userId, LocalDate date) {
+        return evaluations.findOfDate(userId, startOf(date), startOf(date.plusDays(1)))
+                .map(ev -> {
+                    Summary s = summary(userId, date);
+                    return new HomeSubtract(ev.id(), s, s.reduce() + s.skip());
+                })
+                .orElse(null);
+    }
 }
