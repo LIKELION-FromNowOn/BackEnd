@@ -3,6 +3,7 @@ package com.youin.now.today;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.youin.now.checkin.CheckinPort;
 import com.youin.now.common.error.ApiException;
 import com.youin.now.common.error.ErrorCode;
 import com.youin.now.common.llm.LlmClient;
@@ -36,9 +37,6 @@ import java.util.UUID;
  * {@link VerdictPort} 로 매번 {@code userItemId → itemId} 를 다시 찾습니다.
  * {@code userItemId} 로 {@code care_items} 를 찾으면 <b>항상 못 찾습니다</b> —
  * 그쪽은 {@code user_items.id} 입니다.
- *
- * <p>⚠️ <b>{@code RECOMMENDATION_PAUSED} 는 아직 안 넣었습니다.</b> {@code ErrorCode} 에는
- * 있는데 {@code recommendationPaused} 를 읽을 포트가 없습니다.
  */
 @Service
 public class TodayService {
@@ -58,23 +56,29 @@ public class TodayService {
     private final MasterCategoryRepository categories;
     private final TodayActionRepository actions;
     private final LlmClient llm;
+    private final CheckinPort checkins;
 
     public TodayService(VerdictPort verdicts,
                         MasterCareItemRepository careItems,
                         MasterCategoryRepository categories,
                         TodayActionRepository actions,
-                        LlmClient llm) {
+                        LlmClient llm,
+                        CheckinPort checkins) {
         this.verdicts = verdicts;
         this.careItems = careItems;
         this.categories = categories;
         this.actions = actions;
         this.llm = llm;
+        this.checkins = checkins;
     }
 
     // ── NOW-TODAY-001 ────────────────────────────────
 
     /**
      * 오늘의 행동 조회. <b>없으면 이 시점에 만듭니다.</b>
+     *
+     * <p><b>추천을 멈춘 날에는 409 {@code RECOMMENDATION_PAUSED} 입니다.</b>
+     * 판정 여부보다 먼저 봅니다 — 쉬기로 한 날에 「덜어내기 먼저」를 요구하면 안 됩니다.
      *
      * <p><b>판정이 없으면 409 {@code NO_EVALUATION} 입니다.</b> 「후보가 없어서 없다」와
      * 「판정을 아직 안 했다」는 화면에서 다르게 처리해야 합니다.
@@ -84,6 +88,11 @@ public class TodayService {
     @Transactional
     public TodayRes.Action getOrCreate(String userId) {
         OffsetDateTime now = OffsetDateTime.now(KST);
+
+        boolean paused = checkins.latest(userId)
+                .map(CheckinPort.LatestCheckin::recommendationPaused)
+                .orElse(false);
+        if (paused) throw new ApiException(ErrorCode.RECOMMENDATION_PAUSED);
 
         Optional<TodayAction> existing = actions.findByUserIdAndExpiresAtAfter(userId, now);
         if (existing.isPresent()) {
@@ -207,6 +216,9 @@ public class TodayService {
      *
      * <p><b>홈은 읽기 전용입니다.</b> 여기서 오늘의 행동을 새로 만들지 않습니다 —
      * {@link #getOrCreate} 와 다른 점입니다.
+     *
+     * <p>추천 중단 검사도 여기서 하지 않습니다. 홈이 {@code paused} 를 따로 보고
+     * {@code nextStep} 을 {@code rest} 로 정합니다.
      *
      * @return 오늘 행동이 없으면 {@code null}. 홈은 카드를 안 띄우면 됩니다
      */

@@ -21,9 +21,6 @@ import java.time.ZoneId;
  *
  * <p><b>{@code VerdictPort.of()} 를 부르지 않습니다.</b> 판정 32건이 통째로 오면
  * 홈이 무거워집니다. 그래서 창구가 {@code subtractForHome} 으로 따로 나뉘어 있습니다.
- *
- * <p>⚠️ <b>아직 못 채우는 둘</b> — {@code recommendationPaused} 와
- * {@code unlock.recordedDays} 는 {@code CheckinPort} 대기입니다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -64,12 +61,11 @@ public class HomeService {
     public HomeRes get(String userId) {
         LocalDate today = LocalDate.now(KST);
 
-        // TODO CheckinPort 에 recommendationPaused 가 들어오면 채웁니다 (이철희 님)
-        //      users.recommendation_paused 이고 GET /me 는 이미 내려주고 있습니다
-        boolean paused = false;
-
         var checkin = checkins.latest(userId).orElse(null);
         String state = checkin == null ? null : checkin.state();
+
+        // 추천 중단 여부. 상태 체크가 없으면 중단도 아닙니다
+        boolean paused = checkin != null && checkin.recommendationPaused();
 
         int itemCount = items.selected(userId).size();
 
@@ -96,10 +92,9 @@ public class HomeService {
                 : footstepService.footstepForHome(
                 userId, todayCard == null ? null : todayCard.categoryId());
 
-        // TODO CheckinPort.stats 가 열리면 채웁니다 (이철희 님)
-        //      recordedDays = COUNT(DISTINCT check_date) FROM checkins
-        //      /logs/summary 의 daysRecorded 와 같은 값입니다
-        int recordedDays = 0;
+        // 기록한 날. from · to 가 null 이면 전체 기간입니다.
+        // /logs/summary 의 daysRecorded 와 같은 값입니다
+        int recordedDays = checkins.stats(userId, null, null).daysRecorded();
 
         return new HomeRes(
                 nextStepOf(paused, itemCount, checkin != null, subtract, todayCard),

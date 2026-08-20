@@ -1,5 +1,6 @@
 package com.youin.now.log;
 
+import com.youin.now.checkin.CheckinPort;
 import com.youin.now.common.error.ApiException;
 import com.youin.now.common.error.ErrorCode;
 import com.youin.now.item.ItemPort;
@@ -29,9 +30,6 @@ import java.util.Map;
  *
  * <p><b>완료한 것만 남깁니다.</b> 달성률·연속일은 만들지 않습니다 —
  * 비율을 만들면 못 한 날이 드러나고, 끊기는 순간이 부담이 되기 때문입니다.
- *
- * <p>⚠️ <b>{@code daysRecorded} 와 {@code topState} 가 아직 0 · null 입니다.</b>
- * {@code CheckinPort} 대기입니다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -52,17 +50,20 @@ public class LogService {
     private final MasterCategoryRepository categories;
     private final MasterCareItemRepository careItems;
     private final VerdictPort verdicts;
+    private final CheckinPort checkins;
 
     public LogService(LogActionRepository actions,
                       ItemPort items,
                       MasterCategoryRepository categories,
                       MasterCareItemRepository careItems,
-                      VerdictPort verdicts) {
+                      VerdictPort verdicts,
+                      CheckinPort checkins) {
         this.actions = actions;
         this.items = items;
         this.categories = categories;
         this.careItems = careItems;
         this.verdicts = verdicts;
+        this.checkins = checkins;
     }
 
     // ── NOW-LOG-001 ────────────────────────────────
@@ -84,7 +85,7 @@ public class LogService {
                 ? toDate.minusDays(MONTH_DAYS) : parseDate(from);
 
         if (fromDate.isAfter(toDate)) {
-            throw new ApiException(ErrorCode.VALIDATION_FAILED, "시작일이 종료일보다 늦습니다");
+            throw new ApiException(ErrorCode.INVALID_DATE_RANGE);
         }
 
         int max = (limit == null) ? LIMIT_DEFAULT : limit;
@@ -133,7 +134,7 @@ public class LogService {
     public LogRes.Summary getSummary(String userId, String period) {
         String p = (period == null || period.isBlank()) ? "month" : period;
         if (!List.of("week", "month").contains(p)) {
-            throw new ApiException(ErrorCode.VALIDATION_FAILED, "period 값이 올바르지 않습니다");
+            throw new ApiException(ErrorCode.INVALID_PERIOD);
         }
 
         LocalDate toDate = LocalDate.now(KST);
@@ -166,16 +167,13 @@ public class LogService {
                         x.count()))
                 .toList();
 
-        // TODO CheckinPort 가 열리면 채웁니다 (이철희 님)
-        //      daysRecorded = COUNT(DISTINCT check_date) FROM checkins
-        //      topState     = checkins.state 최빈값
-        //      홈의 unlock.recordedDays 와 같은 값입니다
-        int daysRecorded = 0;
-        String topState = null;
+        // 체크인 통계. verdicts.stats 와 같은 범위입니다.
+        // daysRecorded 는 홈의 unlock.recordedDays 와 같은 값입니다
+        var cs = checkins.stats(userId, fromDate, toDate);
 
         return new LogRes.Summary(
                 p, rows.size(), byCategory, sentenceOf(p, byCategory),
-                daysRecorded, st.daysSubtracted(), topState, topSubtracted);
+                cs.daysRecorded(), st.daysSubtracted(), cs.topState(), topSubtracted);
     }
 
     // ── 내부 ────────────────────────────────────────
@@ -231,7 +229,6 @@ public class LogService {
      *
      * <p>⚠️ <b>{@code ItemPort.selected} 는 지금 선택한 항목만 줍니다.</b>
      * 사용자가 항목을 지우면 그 항목의 과거 기록은 {@code categoryId} 가 비게 됩니다.
-     * {@code today/} 의 {@code masterOf()} 도 같은 한계가 있습니다.
      */
     private Map<String, String> categoryIdByUserItemId(String userId) {
         Map<String, String> m = new LinkedHashMap<>();
@@ -246,7 +243,7 @@ public class LogService {
         try {
             return LocalDate.parse(s);
         } catch (DateTimeParseException e) {
-            throw new ApiException(ErrorCode.VALIDATION_FAILED, "날짜 형식이 올바르지 않습니다");
+            throw new ApiException(ErrorCode.INVALID_DATE_RANGE);
         }
     }
 }
