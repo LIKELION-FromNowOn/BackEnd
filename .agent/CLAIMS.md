@@ -7,7 +7,6 @@
 
 | 패키지 · 파일 | 누가 | 시작 시각 | 무엇을 |
 |---|---|---|---|
-| checkin | FeHee | 2026-08-20 20:45 | CheckinPort에 recommendationPaused 추가 |
 
 ## 쓰는 법
 

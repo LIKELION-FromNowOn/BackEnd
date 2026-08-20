@@ -17,6 +17,18 @@
 
 ---
 
+## 2026-08-20 20:45~23:40 · FeHee · checkin
+
+- `CheckinPort.LatestCheckin`에 `recommendationPaused`를 추가해 홈·오늘의 행동에서 추천 중단 상태를 읽을 수 있게 했습니다.
+- `CheckinPort.stats(userId, from, to)`를 추가했습니다.
+  - `daysRecorded`: 체크인한 서로 다른 날짜 수
+  - `topState`: 기간 내 가장 자주 기록한 상태 (없으면 `null`)
+  - 기간 시작·끝이 `null`이면 전체 기간을 집계합니다.
+- 확인: `gradlew compileJava` 통과.
+- PR: `feature/checkin-port-FeHee` → `develop` 머지 완료.
+
+---
+
 ## 2026-08-20 · FeHee · item · auth · checkin
 
 - 한 것: NOW-ITEM-001~004 관리 항목 조회·저장·직접 입력·삭제 구현
