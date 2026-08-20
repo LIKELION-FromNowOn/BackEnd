@@ -9,9 +9,10 @@ import java.util.Set;
  * <p>남의 {@code Repository} 를 직접 부르지 않는다는 규칙({@code docs/04-ports.md:3})에 따라
  * 창구를 하나 둡니다. {@code checkin/} 은 이 인터페이스만 압니다.
  *
- * <p><b>2026-08-20 현재 마스터 시드가 비어 있습니다.</b> 그래서 {@link SignalWeightPortStub} 이
- * 빈 지도를 돌려주고, 신호 강도가 0 으로 계산됩니다. <b>그건 정상입니다</b> —
- * 시드가 들어오면 그대로 값이 흐릅니다.
+ * <p><b>2026-08-20 실제 구현이 붙었습니다.</b> 마스터 시드가 들어와서
+ * {@code master/SignalWeightAdapter} 가 {@code signals} 를 직접 읽습니다.
+ * 그전에는 스텁이 빈 지도를 돌려줘 신호 강도가 항상 0 이었고,
+ * 임계값 5 를 못 넘어 <b>상태 전환 제안이 한 번도 뜨지 않았습니다.</b>
  */
 public interface SignalWeightPort {
 
