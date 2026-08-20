@@ -114,4 +114,23 @@ public class AuthUser {
 
     public void updateNickname(String nickname) { this.nickname = nickname; }
     public void updateEmail(String email)       { this.email = email; }
+
+    /** 비밀번호 교체. <b>해시를 받습니다</b> — 원문을 여기까지 들고 오지 마십시오 */
+    public void updatePassword(String passwordHash) { this.passwordHash = passwordHash; }
+
+    /**
+     * 탈퇴 표시. <b>행을 지우지 않고 시각만 찍습니다.</b>
+     *
+     * <p>조회가 전부 {@code deletedAtIsNull} 로 걸러지고 있어서, 이 값이 찍히는 순간
+     * 로그인도 조회도 「없는 사람」이 됩니다. 항목·기록은 DB 에 남습니다 —
+     * 다른 표들이 이 행을 외래키로 참조하고 있어 지우면 같이 무너집니다.
+     *
+     * <p>이메일도 비웁니다. {@code UNIQUE (email) WHERE deleted_at IS NULL} 이라
+     * 안 비워도 재가입은 되지만, 남겨 둘 이유가 없는 개인정보입니다.
+     */
+    public void markWithdrawn(OffsetDateTime at) {
+        this.deletedAt = at;
+        this.email = null;
+        this.passwordHash = null;
+    }
 }

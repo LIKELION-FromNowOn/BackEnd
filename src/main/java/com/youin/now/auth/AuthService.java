@@ -109,6 +109,56 @@ public class AuthService {
                 user.recommendationPaused(), users.countActiveItems(userId), latest.isPresent());
     }
 
+    /**
+     * {@code PATCH /me/password} 비밀번호 변경.
+     *
+     * <p><b>지금 비밀번호를 다시 확인합니다.</b> 토큰만으로 바꾸게 하면 토큰이 새는 순간
+     * 계정을 뺏깁니다. 로그인과 같은 {@code 401 INVALID_CREDENTIALS} 를 씁니다 —
+     * 「비밀번호가 틀렸다」와 「계정이 없다」를 가르지 않는 것과 같은 이유입니다.
+     */
+    @Transactional
+    public AuthPasswordRes changePassword(String userId, AuthPasswordReq req) {
+        AuthUser user = users.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+        if (user.isGuest()) throw new ApiException(ErrorCode.GUEST_FORBIDDEN);
+
+        requireCurrentPassword(user, req.currentPassword());
+
+        if (!validPassword(req.newPassword())) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "비밀번호는 8~64자입니다");
+        }
+        user.updatePassword(ENCODER.encode(req.newPassword()));
+        return new AuthPasswordRes(true);
+    }
+
+    /**
+     * {@code DELETE /me} 회원 탈퇴.
+     *
+     * <p><b>행을 지우지 않고 {@code deleted_at} 만 찍습니다(2026-08-21 송원석 결정).</b>
+     * 조회가 전부 {@code deletedAtIsNull} 로 걸러지고 있어서 그 순간부터 없는 사람이 됩니다.
+     * 항목·판정·기록은 다른 표가 이 행을 외래키로 참조하고 있어 지우면 같이 무너집니다.
+     *
+     * <p>되돌릴 수 없는 동작이라 비밀번호를 다시 받습니다.
+     */
+    @Transactional
+    public AuthWithdrawRes withdraw(String userId, AuthWithdrawReq req) {
+        AuthUser user = users.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+        if (user.isGuest()) throw new ApiException(ErrorCode.GUEST_FORBIDDEN);
+
+        requireCurrentPassword(user, req.password());
+
+        user.markWithdrawn(OffsetDateTime.now());
+        return new AuthWithdrawRes(true);
+    }
+
+    /** 두 곳이 같은 검사를 씁니다. 실패 문구를 하나로 두어야 갈라지지 않습니다 */
+    private void requireCurrentPassword(AuthUser user, String raw) {
+        if (raw == null || user.passwordHash() == null || !ENCODER.matches(raw, user.passwordHash())) {
+            throw new ApiException(ErrorCode.INVALID_CREDENTIALS);
+        }
+    }
+
     @Transactional
     public AuthProfileRes updateProfile(String userId, AuthProfileReq req) {
         if (!req.nicknameProvided() && !req.emailProvided()) {
