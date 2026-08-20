@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -30,9 +31,14 @@ import java.util.UUID;
  * <p><b>후보 선정과 순위는 코드입니다.</b> LLM 은 1순위 후보 하나를 문장으로 바꾸기만 합니다
  * ({@code docs/prompts/02-today-action.md}).
  *
- * <p><b>{@code durationSec} 도 서버가 정합니다.</b> 마스터의 {@code minutes} 를 씁니다.
+ * <p><b>{@code actions} 에 마스터 ID 칸이 없습니다.</b> 동결 직전이라 컬럼을 늘리지 않고
+ * {@link VerdictPort} 로 매번 {@code userItemId → itemId} 를 다시 찾습니다.
+ * {@code userItemId} 로 {@code care_items} 를 찾으면 <b>항상 못 찾습니다</b> —
+ * 그쪽은 {@code user_items.id} 입니다.
  *
- * <p><b>후보가 없으면 {@code null} 입니다.</b> 예외가 아닙니다 — 첫 발자국 카드로 넘어갈 자리입니다.
+ * <p>⚠️ <b>ErrorCode 네 개가 아직 없습니다</b> — {@code ACTION_NOT_FOUND} ·
+ * {@code REROLL_LIMIT} · {@code ALREADY_COMPLETED} · {@code NO_EVALUATION}.
+ * {@code common/error/} 는 이철희 님 소유라 추가되면 바꿉니다. 상태 코드는 맞춰 뒀습니다.
  */
 @Service
 public class TodayService {
@@ -70,31 +76,63 @@ public class TodayService {
     /**
      * 오늘의 행동 조회. <b>없으면 이 시점에 만듭니다.</b>
      *
+     * <p><b>판정이 없으면 409 입니다.</b> 「후보가 없어서 없다」와 「판정을 아직 안 했다」는
+     * 화면에서 다르게 처리해야 합니다. 앞의 것만 첫 발자국 카드로 갑니다.
+     *
      * @return 후보가 없으면 {@code null} — 첫 발자국 카드로 넘깁니다
      */
     @Transactional
     public TodayRes.Action getOrCreate(String userId) {
         OffsetDateTime now = OffsetDateTime.now(KST);
 
-        return actions.findByUserIdAndExpiresAtAfter(userId, now)
-                .map(a -> toRes(a, "llm"))
-                .orElseGet(() -> create(userId, null, now));
+        Optional<TodayAction> existing = actions.findByUserIdAndExpiresAtAfter(userId, now);
+        if (existing.isPresent()) {
+            return toRes(userId, existing.get(), "llm");
+        }
+
+        // TODO ErrorCode.NO_EVALUATION 추가되면 교체
+        VerdictPort.VerdictSet set = verdicts.of(userId, LocalDate.now(KST))
+                .orElseThrow(() -> new ApiException(
+                        ErrorCode.NO_CHECKIN, "덜어내기를 먼저 진행해 주세요"));
+
+        return create(userId, set, null, now);
     }
 
     // ── NOW-TODAY-002 ────────────────────────────────
 
-    /** 다시 받기. <b>직전 추천 항목은 후보에서 빠집니다</b> */
+    /**
+     * 다시 받기. <b>직전 추천 항목과 최근 제시 문장은 후보에서 빠집니다.</b>
+     *
+     * @param actionId 명세가 본문에 요구합니다
+     */
     @Transactional
-    public TodayRes.Action reroll(String userId) {
+    public TodayRes.Reroll reroll(String userId, String actionId) {
         OffsetDateTime now = OffsetDateTime.now(KST);
 
-        TodayAction action = actions.findByUserIdAndExpiresAtAfter(userId, now)
-                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "오늘의 행동이 없습니다"));
+        TodayAction action = mine(userId, actionId);
 
-        if (action.rerollCount() >= REROLL_LIMIT) {
-            throw new ApiException(ErrorCode.VALIDATION_FAILED, "다시 받기 한도를 넘었습니다");
+        // TODO ErrorCode.ALREADY_COMPLETED 추가되면 교체 (409)
+        if (TodayAction.DONE.equals(action.status())) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "이미 완료한 행동입니다");
         }
-        return create(userId, action, now);
+        // TODO ErrorCode.REROLL_LIMIT 추가되면 교체
+        if (action.rerollCount() >= REROLL_LIMIT) {
+            throw new ApiException(ErrorCode.RATE_LIMITED, "다시 받기 한도를 넘었습니다");
+        }
+
+        VerdictPort.VerdictSet set = verdicts.of(userId, LocalDate.now(KST))
+                .orElseThrow(() -> new ApiException(
+                        ErrorCode.NO_CHECKIN, "덜어내기를 먼저 진행해 주세요"));
+
+        short before = action.rerollCount();
+        TodayRes.Action a = create(userId, set, action, now);
+        if (a == null) {
+            throw new ApiException(ErrorCode.NOT_FOUND, "제안할 행동이 더 없습니다");
+        }
+        return new TodayRes.Reroll(
+                a.actionId(), a.categoryId(), a.categoryName(), a.title(),
+                a.durationSec(), a.rerollLeft(), before + 1,
+                a.generatedBy(), a.expiresAt());
     }
 
     // ── NOW-TODAY-003 ────────────────────────────────
@@ -128,18 +166,16 @@ public class TodayService {
         TodayAction action = mine(userId, actionId);
         OffsetDateTime now = OffsetDateTime.now(KST);
 
+        MasterCareItem m = masterOf(userId, action);
+
         action.complete(now);
         actions.save(action);
-
-        String categoryId = careItems.findById(action.userItemId())
-                .map(MasterCareItem::categoryId)
-                .orElse(null);
 
         return new TodayRes.Complete(
                 newId("lg_", 20),
                 action.id(),
                 TodayRes.iso(now),
-                categoryId,
+                m == null ? null : m.categoryId(),
                 timerId != null,
                 "오늘 하나 했습니다.");
     }
@@ -149,11 +185,8 @@ public class TodayService {
     /**
      * 거절 사유 기록. <b>실패로 저장하지 않습니다.</b>
      *
-     * <table>
-     *   <tr><td>{@code time}</td><td>더 짧은 것으로 다시 고름</td></tr>
-     *   <tr><td>{@code fit}</td><td>오늘 후보에서 제외</td></tr>
-     *   <tr><td>{@code none}</td><td>제안 중단. 첫 발자국 카드도 내림</td></tr>
-     * </table>
+     * <p><b>완료한 행동은 거절할 수 없습니다.</b> 완료 기록이 남아 있는데 상태만
+     * 거절로 덮이면 기록 탭에서 어긋납니다.
      */
     @Transactional
     public TodayRes.Reject reject(String userId, String actionId, String reason) {
@@ -161,6 +194,11 @@ public class TodayService {
             throw new ApiException(ErrorCode.VALIDATION_FAILED, "거절 사유가 올바르지 않습니다");
         }
         TodayAction action = mine(userId, actionId);
+
+        // TODO ErrorCode.ALREADY_COMPLETED 추가되면 교체 (409)
+        if (TodayAction.DONE.equals(action.status())) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "이미 완료한 행동입니다");
+        }
         action.reject();
         actions.save(action);
 
@@ -173,14 +211,14 @@ public class TodayService {
      * 후보를 뽑아 1순위를 고르고 문장을 만들어 저장합니다.
      *
      * @param previous 다시 받기면 직전 행동. 그 항목은 후보에서 빠집니다
-     * @return 판정이 없거나 후보가 없으면 {@code null}
+     * @return 후보가 없으면 {@code null}
      */
-    private TodayRes.Action create(String userId, TodayAction previous, OffsetDateTime now) {
+    private TodayRes.Action create(String userId, VerdictPort.VerdictSet set,
+                                   TodayAction previous, OffsetDateTime now) {
 
-        VerdictPort.VerdictSet set = verdicts.of(userId, LocalDate.now(KST)).orElse(null);
-        if (set == null) return null;                       // 그날 판정이 아직 없습니다
+        // ★ LLM 이 실패해도 중복이 안 나가도록 후보 단계에서 거릅니다
+        List<String> recent = recentTitles(userId);
 
-        // 후보 — keep 또는 simplify 이고 직전 추천이 아닌 것
         List<Candidate> candidates = new ArrayList<>();
         for (VerdictPort.ItemVerdict v : set.results()) {
             if (!"keep".equals(v.verdict()) && !"simplify".equals(v.verdict())) continue;
@@ -188,6 +226,8 @@ public class TodayService {
 
             MasterCareItem master = careItems.findById(v.itemId()).orElse(null);
             if (master == null) continue;                   // 직접 입력 항목은 마스터가 없습니다
+
+            if (recent.contains(fallbackTitle(master))) continue;
 
             candidates.add(new Candidate(v, master, score(v, master)));
         }
@@ -199,11 +239,9 @@ public class TodayService {
 
         int durationSec = Math.max(60, picked.master().minutes() * 60);
 
-        TodayLlmOut out = askLlm(picked, durationSec, recentTitles(userId));
+        TodayLlmOut out = askLlm(picked, durationSec, recent);
         String generatedBy = out != null ? "llm" : "fallback";
-        String title = out != null
-                ? out.title()
-                : picked.master().name() + " 한 번만 하기";     // 폴백 — 프롬프트 문서의 문장
+        String title = out != null ? out.title() : fallbackTitle(picked.master());
 
         TodayAction action;
         if (previous != null) {
@@ -223,7 +261,13 @@ public class TodayService {
                     endOfToday(now));
         }
         actions.save(action);
-        return toRes(action, generatedBy);
+
+        return toRes(picked.master(), action, generatedBy);
+    }
+
+    /** 폴백 문장. {@code docs/prompts/02-today-action.md} 의 규칙입니다 */
+    private static String fallbackTitle(MasterCareItem m) {
+        return m.name() + " 한 번만 하기";
     }
 
     /**
@@ -241,7 +285,7 @@ public class TodayService {
         return s;
     }
 
-    /** 최근 제시 문장. 프롬프트가 {@code recentTitles} 로 중복 금지에 씁니다 */
+    /** 최근 제시 문장. 후보 필터와 프롬프트 양쪽에 씁니다 */
     private List<String> recentTitles(String userId) {
         return actions.findTop10ByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
@@ -253,7 +297,6 @@ public class TodayService {
      * LLM 호출. <b>실패하면 {@code null} 입니다</b> — 예외를 던지지 않습니다.
      *
      * <p>키가 {@code sk-} 로 시작하지 않으면 부르지도 않고 {@code null} 입니다.
-     * 그래도 앱은 정상이고 폴백 문장으로 갑니다.
      */
     private TodayLlmOut askLlm(Candidate c, int durationSec, List<String> recent) {
         try {
@@ -277,6 +320,7 @@ public class TodayService {
         }
     }
 
+    // TODO ErrorCode.ACTION_NOT_FOUND 추가되면 교체
     private TodayAction mine(String userId, String actionId) {
         TodayAction a = actions.findById(actionId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "행동을 찾을 수 없습니다"));
@@ -284,8 +328,26 @@ public class TodayService {
         return a;
     }
 
-    private TodayRes.Action toRes(TodayAction a, String generatedBy) {
-        MasterCareItem m = careItems.findById(a.userItemId()).orElse(null);
+    /**
+     * {@code actions} 에 마스터 ID 칸이 없어 판정에서 다시 찾습니다.
+     *
+     * <p><b>{@code careItems.findById(userItemId)} 는 항상 못 찾습니다.</b>
+     * {@code user_items.id} 와 {@code care_items.id} 는 다른 값입니다.
+     */
+    private MasterCareItem masterOf(String userId, TodayAction a) {
+        return verdicts.of(userId, LocalDate.now(KST))
+                .flatMap(set -> set.results().stream()
+                        .filter(v -> v.userItemId().equals(a.userItemId()))
+                        .findFirst())
+                .flatMap(v -> careItems.findById(v.itemId()))
+                .orElse(null);
+    }
+
+    private TodayRes.Action toRes(String userId, TodayAction a, String generatedBy) {
+        return toRes(masterOf(userId, a), a, generatedBy);
+    }
+
+    private TodayRes.Action toRes(MasterCareItem m, TodayAction a, String generatedBy) {
         String categoryName = m == null ? null
                 : categories.findById(m.categoryId()).map(MasterCategory::name).orElse(null);
 
@@ -295,7 +357,7 @@ public class TodayService {
                 categoryName,
                 a.title(),
                 a.durationSec(),
-                a.userItemId(),
+                m == null ? null : m.id(),          // ★ 마스터 ID. userItemId 가 아닙니다
                 a.status(),
                 REROLL_LIMIT - a.rerollCount(),
                 generatedBy,

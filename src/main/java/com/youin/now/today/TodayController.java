@@ -29,17 +29,19 @@ public class TodayController {
     /**
      * {@code NOW-TODAY-001} 오늘의 행동. <b>없으면 이 시점에 만듭니다.</b>
      *
-     * <p>후보가 없으면 {@code data} 가 {@code null} 입니다 — 화면은 첫 발자국 카드로 갑니다.
+     * <p>판정이 없으면 409 입니다. 후보가 없으면 {@code data} 가 {@code null} 이고
+     * 화면은 첫 발자국 카드로 갑니다.
      */
     @GetMapping
     public ApiResponse<TodayRes.Action> getToday(@CurrentUser String userId) {
         return ApiResponse.ok(todayService.getOrCreate(userId));
     }
 
-    /** {@code NOW-TODAY-002} 다시 받기. 직전 추천 항목은 후보에서 빠집니다 */
+    /** {@code NOW-TODAY-002} 다시 받기. 직전 추천과 최근 문장은 후보에서 빠집니다 */
     @PostMapping("/reroll")
-    public ApiResponse<TodayRes.Action> reroll(@CurrentUser String userId) {
-        return ApiResponse.ok(todayService.reroll(userId));
+    public ApiResponse<TodayRes.Reroll> reroll(@CurrentUser String userId,
+                                               @Valid @RequestBody TodayReq.Reroll req) {
+        return ApiResponse.ok(todayService.reroll(userId, req.actionId()));
     }
 
     /** {@code NOW-TODAY-003} 타이머 시작. {@code durationSec} 은 서버가 정합니다 */

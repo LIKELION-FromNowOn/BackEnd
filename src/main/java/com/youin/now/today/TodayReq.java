@@ -2,10 +2,12 @@ package com.youin.now.today;
 
 import jakarta.validation.constraints.NotBlank;
 
-/** {@code NOW-TODAY-003~005} 요청 본문. */
+/** {@code NOW-TODAY-002~005} 요청 본문. */
 public final class TodayReq {
 
     private TodayReq() { }
+
+    public record Reroll(@NotBlank String actionId) { }
 
     public record Start(@NotBlank String actionId) { }
 

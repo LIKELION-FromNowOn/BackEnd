@@ -17,7 +17,7 @@ public final class TodayRes {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
-    /** {@code GET /today} · {@code POST /today/reroll} 공통 */
+    /** {@code GET /today} */
     public record Action(
             String actionId,
             String categoryId,
@@ -27,6 +27,24 @@ public final class TodayRes {
             String sourceItemId,
             String status,
             int rerollLeft,
+            String generatedBy,
+            String expiresAt
+    ) { }
+
+    /**
+     * {@code POST /today/reroll}.
+     *
+     * <p><b>{@link Action} 과 필드가 다릅니다</b> — {@code sourceItemId} · {@code status} 가 없고
+     * {@code rerollCount} 가 있습니다.
+     */
+    public record Reroll(
+            String actionId,
+            String categoryId,
+            String categoryName,
+            String title,
+            int durationSec,
+            int rerollLeft,
+            int rerollCount,
             String generatedBy,
             String expiresAt
     ) { }
