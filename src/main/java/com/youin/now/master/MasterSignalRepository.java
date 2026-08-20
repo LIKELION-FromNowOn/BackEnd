@@ -12,4 +12,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MasterSignalRepository extends JpaRepository<MasterSignal, String> {
 
     List<MasterSignal> findByIdIn(Collection<String> ids);
+
+    /** {@code NOW-MASTER-003} 목록 조회용 (김민정) */
+    List<MasterSignal> findAllByOrderBySortOrderAsc();
 }
