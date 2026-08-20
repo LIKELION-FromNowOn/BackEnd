@@ -139,4 +139,21 @@ public class VerdictPortAdapter implements VerdictPort {
         }
         return new Stats(evaluations.countSubtractedDays(userId, f, t), top);
     }
+
+    /**
+     * 홈의 {@code subtract} 블록. <b>그날 판정이 없으면 {@code null} 입니다.</b>
+     *
+     * <p>{@code removedCount} 는 {@code reduce + skip} 입니다.
+     * {@code simplify} 는 방식만 바꾼 것이라 걷어낸 수에 안 넣습니다.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public HomeSubtract subtractForHome(String userId, LocalDate date) {
+        return evaluations.findOfDate(userId, startOf(date), startOf(date.plusDays(1)))
+                .map(ev -> {
+                    Summary s = summary(userId, date);
+                    return new HomeSubtract(ev.id(), s, s.reduce() + s.skip());
+                })
+                .orElse(null);
+    }
 }
