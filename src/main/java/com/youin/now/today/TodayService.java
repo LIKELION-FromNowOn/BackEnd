@@ -1,5 +1,6 @@
 package com.youin.now.today;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.youin.now.common.error.ApiException;
@@ -212,15 +213,26 @@ public class TodayService {
     @Transactional(readOnly = true)
     public ForHome todayForHome(String userId) {
         return actions.findByUserIdAndExpiresAtAfter(userId, OffsetDateTime.now(KST))
-                .map(a -> new ForHome(
-                        a.id(), a.title(), a.durationSec(),
-                        a.status(), a.rank(), a.totalCandidates()))
+                .map(a -> {
+                    MasterCareItem m = masterOf(userId, a);
+                    return new ForHome(
+                            a.id(), a.title(), a.durationSec(),
+                            a.status(), a.rank(), a.totalCandidates(),
+                            m == null ? null : m.categoryId());
+                })
                 .orElse(null);
     }
 
-    /** 홈이 그대로 실어 보낼 모양입니다. {@code NOW-HOME-001} 의 {@code today} 블록 */
+    /**
+     * 홈이 그대로 실어 보낼 모양입니다. {@code NOW-HOME-001} 의 {@code today} 블록.
+     *
+     * <p><b>{@code categoryId} 는 응답에 안 나갑니다.</b> 명세는 여섯 칸이고,
+     * 이 값은 첫 발자국 카드를 고를 때 「오늘의 케어와 같은 카테고리를 우선」(규칙 2)에만 씁니다.
+     * {@code GET /today} 는 명세에 있는 필드라 그대로 내려줍니다.
+     */
     public record ForHome(String actionId, String title, int durationSec,
-                          String status, short rank, short totalCandidates) { }
+                          String status, short rank, short totalCandidates,
+                          @JsonIgnore String categoryId) { }
 
     // ── 내부 ────────────────────────────────────────
 
