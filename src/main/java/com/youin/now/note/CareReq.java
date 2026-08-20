@@ -35,9 +35,14 @@ public record CareReq(
      * @param text   <b>화면에 그대로 보여 줄 문장.</b> 서버가 조립하지 않습니다
      * @param sent   {@code noteLines} 의 몇 번째 문장인지 (1부터)
      * @param dp     제한 일수. <b>{@code null} 이면 기간을 모르는 것</b>이라 자동 만료시키지 않습니다
+     * @param keywords <b>매칭용 낱말.</b> 없으면 이 주의사항은 아무 데도 안 걸립니다 —
+     *                 케어 코치가 「각질 관리 해도 되나요」에 못 답하고,
+     *                 「예정」에서 충돌 표시도 안 뜹니다.
+     *                 문장을 넣지 마십시오. 「각질」·「필링」처럼 <b>낱말</b>이어야 합니다
      */
     public record Caution(String itemId,
                           @NotBlank @Size(max = 255) String text,
                           @NotNull @Min(1) Integer sent,
-                          Integer dp) { }
+                          Integer dp,
+                          List<@NotBlank String> keywords) { }
 }

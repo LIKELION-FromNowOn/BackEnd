@@ -107,7 +107,7 @@ public class NoteService {
                         out.add(new CareRes.Caution(
                                 r.careItemId(),
                                 r.cautionText() != null ? r.cautionText() : r.name(),
-                                r.sentNo(), dp, left));
+                                r.sentNo(), dp, left, parseKeywords(r.keywords())));
                     }
                     return new CareRes(note.title(), (int) Math.max(0, passed), out, true, null);
                 })
@@ -154,13 +154,30 @@ public class NoteService {
 
         for (CareReq.Caution c : cautions) {
             rules.save(new CareNoteRule(Ids.of("cnr"), noteId,
-                    c.sent().shortValue(), c.text(),
+                    c.sent().shortValue(), c.text(), toJson(c.keywords()),
                     c.dp() == null ? 0 : c.dp().shortValue(), c.itemId()));
         }
 
         CareRes saved = careContext(userId);
         return new CareRes(saved.lastType(), saved.ago(), saved.cautions(),
                 saved.hasNote(), cautions.size());
+    }
+
+    /**
+     * 매칭용 낱말을 JSON 배열 문자열로. <b>없으면 {@code null} 입니다.</b>
+     *
+     * <p>이 값이 비면 그 주의사항은 <b>아무 데도 안 걸립니다</b> —
+     * 케어 코치가 못 찾고({@code CoachService}), 예정의 충돌 표시도 안 뜹니다
+     * ({@code PlanService.conflictOf} 가 {@code keywords} 로 맞춰 봅니다).
+     * 2026-08-20 에 요청 필드로 올렸습니다 — 서버가 문장에서 뽑아내면 지어내는 것이 됩니다.
+     */
+    private static String toJson(List<String> keywords) {
+        if (keywords == null || keywords.isEmpty()) return null;
+        try {
+            return MAPPER.writeValueAsString(keywords);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** 자유 텍스트는 저장 전에 반드시 통과해야 합니다. LLM 이 없는 자리라 순서 문제는 없습니다 */
