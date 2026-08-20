@@ -1,5 +1,7 @@
 package com.youin.now.subtract;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import com.youin.now.checkin.CheckinPort;
 import com.youin.now.common.error.ApiException;
 import com.youin.now.common.error.ErrorCode;
@@ -38,6 +40,9 @@ public class SubtractService {
      * 애플리케이션에서 봅니다. 값이 바뀌면 여기 한 줄만 고치면 됩니다.
      */
     private static final int MIN_ITEMS = 3;
+
+    /** 날짜 경계는 KST 로 자릅니다. DB 의 DATETIME 에는 시간대가 없습니다 */
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     /** 명세서가 응답에 쓰는 ISO 8601. {@code 2026-08-20T09:12:00+09:00} 모양입니다. */
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
@@ -209,6 +214,47 @@ public class SubtractService {
             if (!out.contains(v)) out.add(v);
         }
         return out;
+    }
+
+    /**
+     * 기록 탭 H03 — 덜어내기 이력.
+     *
+     * <p><b>연속 달성일도 달성률도 세지 않습니다</b>(2026-08-20 송원석 님 결정).
+     * {@code NOW-LOG-001} 의 「연속 달성일을 만들지 않습니다」를 그대로 지킵니다.
+     *
+     * <p>판정 하나에 결과가 여러 건이라 <b>한 번에 다 읽고 메모리에서 묶습니다.</b>
+     * 판정 수가 사용자당 하루 하나라 이 규모에서는 N+1 이 문제되지 않습니다.
+     *
+     * @param from  이 날부터 (KST, 포함). 없으면 전부
+     * @param to    이 날까지 (KST, 포함). 없으면 전부
+     * @param limit 1~100. 없으면 30
+     */
+    @Transactional(readOnly = true)
+    public SubtractHistoryRes history(String userId, LocalDate from, LocalDate to, Integer limit) {
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "조회 기간이 올바르지 않습니다");
+        }
+        int size = limit == null ? 30 : limit;
+        if (size < 1 || size > 100) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "조회 개수가 올바르지 않습니다");
+        }
+
+        List<Evaluation> all = evaluations.findHistory(
+                userId,
+                from == null ? null : from.atStartOfDay(KST).toOffsetDateTime(),
+                to == null ? null : to.plusDays(1).atStartOfDay(KST).toOffsetDateTime());
+
+        List<Evaluation> page = all.size() > size ? all.subList(0, size) : all;
+        List<SubtractHistoryRes.Entry> out = new ArrayList<>();
+        for (Evaluation e : page) {
+            out.add(new SubtractHistoryRes.Entry(
+                    e.id(),
+                    e.createdAt().atZoneSameInstant(KST).toLocalDate().toString(),
+                    e.state(),
+                    summarize(results.findByEvaluationId(e.id())),
+                    e.generatedBy()));
+        }
+        return new SubtractHistoryRes(out, all.size(), all.size() > size);
     }
 
     /**

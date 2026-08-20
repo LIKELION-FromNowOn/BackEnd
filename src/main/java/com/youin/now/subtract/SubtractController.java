@@ -1,5 +1,11 @@
 package com.youin.now.subtract;
 
+import com.youin.now.common.error.ErrorCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import com.youin.now.common.response.ApiResponse;
 import com.youin.now.common.security.CurrentUser;
 import jakarta.validation.Valid;
@@ -63,10 +69,45 @@ public class SubtractController {
      * <p><b>{@code excluded} 항목은 {@code 409 CANNOT_REVERT_EXCLUDED} 입니다.</b>
      * 화면에서는 되돌리기 버튼 자체를 띄우지 마십시오 — 응답의 {@code revertable} 을 보시면 됩니다.
      */
+    /**
+     * 덜어내기 이력. <b>기록 탭 H03 이 씁니다.</b>
+     *
+     * <p>명세서 36건에 없던 API 입니다 — 2026-08-20 에 더했습니다.
+     * `.agent/REQUESTS.md` 에 노션 카드 신설을 올렸습니다.
+     */
+    @GetMapping("/history")
+    public ApiResponse<SubtractHistoryRes> history(
+            @CurrentUser String userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Integer limit) {
+        return ApiResponse.ok(subtractService.history(userId, from, to, limit));
+    }
+
     @PostMapping("/{itemId}/revert")
     public ApiResponse<SubtractRevertRes> revert(@CurrentUser String userId,
                                                  @PathVariable String itemId,
                                                  @Valid @RequestBody SubtractRevertReq req) {
         return ApiResponse.ok(subtractService.revert(userId, itemId, req.evaluationId()));
+    }
+
+    /**
+     * {@code ?from=nope} 처럼 날짜가 깨져 들어오면 <b>500 이 나가고 있었습니다.</b>
+     *
+     * <p>{@code GlobalExceptionHandler} 가 {@code MethodArgumentTypeMismatchException} 을
+     * 안 잡아 {@code Exception.class} 로 떨어집니다. 그건 {@code common/error/} 라
+     * 이철희 님 소유여서 여기서만 막습니다. 전역 수정은 {@code .agent/REQUESTS.md} 에 올렸습니다 —
+     * <b>{@code GET /logs?from=} 도 같은 자리에서 500 이 납니다.</b>
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> badParam(MethodArgumentTypeMismatchException e) {
+        // 무엇이 틀렸는지 알려 줍니다. 「날짜는 YYYY-MM-DD」를 limit 에도 붙이면
+        // 고치는 사람이 엉뚱한 곳을 봅니다
+        String hint = e.getRequiredType() == java.time.LocalDate.class
+                ? "날짜는 YYYY-MM-DD 입니다"
+                : "숫자여야 합니다";
+        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.status())
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_FAILED.name(),
+                        "'" + e.getName() + "' 값이 올바르지 않습니다. " + hint));
     }
 }
