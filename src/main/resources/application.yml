@@ -12,6 +12,18 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # ★ 2026-08-20 추가. 빠뜨리면 시각이 9시간 어긋납니다.
+        #
+        #   DB 의 DATETIME(6) 에는 시간대가 없습니다. MySQL 이 CURRENT_TIMESTAMP(6) 로
+        #   KST 를 적어 넣는데, 이 값이 없으면 하이버네이트가 그것을 UTC 로 읽습니다.
+        #   09:49 KST 로 저장된 것이 09:49Z(=18:49 KST)로 나갔습니다.
+        #   화면의 「방금」이 9시간 뒤 미래로 보입니다.
+        jdbc:
+          time_zone: Asia/Seoul
+        # 하이버네이트 6은 OffsetDateTime 을 기본(DEFAULT=NORMALIZE_UTC)으로 UTC 정규화하면서
+        # 위 jdbc.time_zone 을 무시합니다. NORMALIZE 로 두어야 그 값을 실제로 씁니다.
+        timezone:
+          default_storage: NORMALIZE
     open-in-view: false         # 컨트롤러에서 지연 로딩이 터지는 것을 막습니다
 
 server:

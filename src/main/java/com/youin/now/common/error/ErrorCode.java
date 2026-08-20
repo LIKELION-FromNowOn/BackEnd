@@ -21,7 +21,7 @@ public enum ErrorCode {
     INTERNAL_ERROR   (HttpStatus.INTERNAL_SERVER_ERROR, "잠시 후 다시 시도해 주십시오"),
 
     // 관리 항목
-    MIN_ITEMS_REQUIRED(HttpStatus.BAD_REQUEST, "관리 항목을 최소 개수 이상 골라 주십시오"),
+    MIN_ITEMS_REQUIRED(HttpStatus.BAD_REQUEST, "관리 항목을 3개 이상 선택해 주세요"),
     ITEM_NOT_FOUND    (HttpStatus.NOT_FOUND,   "항목을 찾을 수 없습니다"),
     FREQUENCY_REQUIRED(HttpStatus.BAD_REQUEST, "선택한 항목의 빈도를 골라 주십시오"),
 
