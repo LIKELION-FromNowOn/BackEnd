@@ -1,5 +1,6 @@
 package com.youin.now.checkin;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
@@ -38,5 +39,13 @@ public class CheckinPortAdapter implements CheckinPort {
                     c.createdAt() == null ? null : c.createdAt().toLocalDateTime(),
                     recommendationPaused);
         });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CheckinStats stats(String userId, LocalDate from, LocalDate to) {
+        long daysRecorded = checkins.countRecordedDays(userId, from, to);
+        String topState = checkins.findTopState(userId, from, to).orElse(null);
+        return new CheckinStats(Math.toIntExact(daysRecorded), topState);
     }
 }

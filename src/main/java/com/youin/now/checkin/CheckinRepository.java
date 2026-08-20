@@ -24,4 +24,29 @@ public interface CheckinRepository extends JpaRepository<Checkin, String> {
     @Query(value = "select recommendation_paused from users where id = :userId and deleted_at is null",
             nativeQuery = true)
     boolean findRecommendationPausedByUserId(@Param("userId") String userId);
+
+    @Query(value = """
+            select count(distinct check_date)
+              from checkins
+             where user_id = :userId
+               and (:fromDate is null or check_date >= :fromDate)
+               and (:toDate is null or check_date <= :toDate)
+            """, nativeQuery = true)
+    long countRecordedDays(@Param("userId") String userId,
+                           @Param("fromDate") LocalDate fromDate,
+                           @Param("toDate") LocalDate toDate);
+
+    @Query(value = """
+            select state
+              from checkins
+             where user_id = :userId
+               and (:fromDate is null or check_date >= :fromDate)
+               and (:toDate is null or check_date <= :toDate)
+             group by state
+             order by count(*) desc, state asc
+             limit 1
+            """, nativeQuery = true)
+    Optional<String> findTopState(@Param("userId") String userId,
+                                  @Param("fromDate") LocalDate fromDate,
+                                  @Param("toDate") LocalDate toDate);
 }

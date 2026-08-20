@@ -1,5 +1,6 @@
 package com.youin.now.checkin;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +34,11 @@ public interface CheckinPort {
     Optional<LatestCheckin> latest(String userId);
 
     /**
+     * 상태 체크 기록 요약. 날짜가 {@code null}이면 전체 기간을 집계합니다.
+     */
+    CheckinStats stats(String userId, LocalDate from, LocalDate to);
+
+    /**
      * @param state          {@code energetic} · {@code normal} · {@code low} · {@code drained} · {@code unknown}
      *                       <b>{@code unknown} 은 정도의 눈금이 아니라 「답을 안 하겠다」는 선택지입니다.</b>
      * @param signalIds      고른 이상 징후 번호들. 마스터 {@code signals} 14개 중에서
@@ -43,4 +49,10 @@ public interface CheckinPort {
     record LatestCheckin(String state, List<String> signalIds,
                          double signalStrength, LocalDateTime at,
                          boolean recommendationPaused) {}
+
+    /**
+     * @param daysRecorded 기록한 서로 다른 날짜 수
+     * @param topState     가장 자주 기록한 상태. 기록이 없으면 {@code null}
+     */
+    record CheckinStats(int daysRecorded, String topState) {}
 }
