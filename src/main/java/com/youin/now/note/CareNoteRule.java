@@ -33,6 +33,10 @@ public class CareNoteRule {
     @Column(name = "name", nullable = false)
     private String name;
 
+    /** 화면에 그대로 보여 줄 문장. {@code PUT /me/care} 가 받은 값입니다 */
+    @Column(name = "caution_text")
+    private String cautionText;
+
     /** <b>JSON 배열 문자열입니다.</b> 꺼내 쓰는 쪽에서 풀어야 합니다 */
     @Column(name = "keywords", nullable = false)
     private String keywords;
@@ -50,6 +54,7 @@ public class CareNoteRule {
     public String id()         { return id; }
     public short sentNo()      { return sentNo; }
     public String name()       { return name; }
+    public String cautionText() { return cautionText; }
     public String keywords()   { return keywords; }
     public short dp()          { return dp; }
     public String careItemId() { return careItemId; }

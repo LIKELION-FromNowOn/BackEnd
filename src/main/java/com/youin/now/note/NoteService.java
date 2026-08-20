@@ -71,6 +71,16 @@ public class NoteService {
      * @return 안내문이 없거나 전부 기간이 지났으면 <b>빈 목록</b>
      */
     @Transactional(readOnly = true)
+    /**
+     * 안내문이 등록되어 있는가. <b>제한이 전부 풀렸어도 {@code true} 입니다.</b>
+     *
+     * <p>{@code activeRules} 가 빈 목록인 것과 구분해야 합니다 —
+     * 안내문은 있는데 기간이 다 지난 경우가 있고, 그때도 원문은 볼 수 있어야 합니다.
+     */
+    public boolean hasNote(String userId) {
+        return notes.findTopByUserIdOrderByReceivedAtDescCreatedAtDesc(userId).isPresent();
+    }
+
     public List<NoteRulePort.NoteRule> activeRules(String userId) {
         return notes.findTopByUserIdOrderByReceivedAtDescCreatedAtDesc(userId)
                 .map(note -> {
@@ -81,7 +91,7 @@ public class NoteService {
                         // 기간이 지난 것은 안 넘깁니다. 넘기면 지난 제한으로 항목을 계속 막습니다
                         if (left <= 0) continue;
                         out.add(new NoteRulePort.NoteRule(
-                                r.sentNo(), r.dp(), r.name(),
+                                r.sentNo(), r.dp(), r.name(), r.cautionText(),
                                 parseKeywords(r.keywords()), r.careItemId(), left));
                     }
                     return out;
