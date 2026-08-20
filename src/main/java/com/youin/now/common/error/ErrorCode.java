@@ -53,8 +53,8 @@ public enum ErrorCode {
     NO_EVALUATION     (HttpStatus.CONFLICT,         "덜어내기를 먼저 진행해 주세요"),
 
     // 기록
-    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "날짜 범위가 올바르지 않습니다"),
-    INVALID_PERIOD    (HttpStatus.BAD_REQUEST, "기간 값이 올바르지 않습니다"),
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "조회 기간이 올바르지 않습니다"),
+    INVALID_PERIOD    (HttpStatus.BAD_REQUEST, "조회 단위가 올바르지 않습니다"),
 
     // AI
     LLM_UNAVAILABLE (HttpStatus.SERVICE_UNAVAILABLE, "기본값으로 처리했습니다"),
