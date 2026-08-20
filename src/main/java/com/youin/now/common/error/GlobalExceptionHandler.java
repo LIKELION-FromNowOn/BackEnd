@@ -8,6 +8,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -34,6 +35,14 @@ public class GlobalExceptionHandler {
                 : f.getField() + " — " + f.getDefaultMessage();
         return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.status())
                 .body(ApiResponse.fail(ErrorCode.VALIDATION_FAILED.name(), msg));
+    }
+
+    /** 날짜·숫자 쿼리 파라미터 형식이 맞지 않을 때 마지막 예외 처리로 500이 되는 것을 막습니다. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handle(MethodArgumentTypeMismatchException e) {
+        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.status())
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_FAILED.name(),
+                        ErrorCode.VALIDATION_FAILED.defaultMessage()));
     }
 
     /**

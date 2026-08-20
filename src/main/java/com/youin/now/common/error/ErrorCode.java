@@ -26,6 +26,8 @@ public enum ErrorCode {
     USER_NOT_FOUND       (HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"),
     NO_FIELDS            (HttpStatus.BAD_REQUEST, "수정할 값이 없습니다"),
     GUEST_FORBIDDEN      (HttpStatus.FORBIDDEN, "게스트는 프로필을 수정할 수 없습니다"),
+    CHECKIN_NOT_FOUND    (HttpStatus.NOT_FOUND, "체크인을 찾을 수 없습니다"),
+    NO_PROPOSAL          (HttpStatus.CONFLICT, "제안된 전환이 없습니다"),
 
     // 관리 항목
     MIN_ITEMS_REQUIRED(HttpStatus.BAD_REQUEST, "관리 항목을 3개 이상 선택해 주세요"),
