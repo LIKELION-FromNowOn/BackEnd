@@ -15,4 +15,6 @@ public interface CheckinRepository extends JpaRepository<Checkin, String> {
 
     /** 가장 최근 것. 판정 전에 「상태 체크가 있는가」를 볼 때 씁니다. */
     Optional<Checkin> findTopByUserIdOrderByCheckDateDesc(String userId);
+
+    Optional<Checkin> findByIdAndUserId(String id, String userId);
 }
