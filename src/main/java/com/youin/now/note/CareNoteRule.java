@@ -30,7 +30,7 @@ public class CareNoteRule {
     private short sentNo;
 
     /** 「문지르는 세안」 처럼 사람이 읽는 이름 */
-    @Column(name = "name", nullable = false)
+    @Column(name = "name")
     private String name;
 
     /** 화면에 그대로 보여 줄 문장. {@code PUT /me/care} 가 받은 값입니다 */
@@ -38,7 +38,7 @@ public class CareNoteRule {
     private String cautionText;
 
     /** <b>JSON 배열 문자열입니다.</b> 꺼내 쓰는 쪽에서 풀어야 합니다 */
-    @Column(name = "keywords", nullable = false)
+    @Column(name = "keywords")
     private String keywords;
 
     /** 제한 일수 (D+n). 응답에서는 {@code dp} 입니다 */
@@ -50,6 +50,25 @@ public class CareNoteRule {
     private String careItemId;
 
     protected CareNoteRule() { }
+
+    /**
+     * {@code PUT /me/care} 가 만드는 주의사항.
+     *
+     * <p><b>{@code name} 과 {@code keywords} 는 비웁니다.</b> 요청에 없는 값이라 지어내지 않습니다.
+     * {@code name} 은 「문지르는 세안」 같은 라벨이고 {@code keywords} 는 코치 매칭용인데,
+     * 둘 다 안내문을 사람이 읽고 붙인 값입니다.
+     *
+     * <p>⚠️ {@code keywords} 가 비면 <b>케어 코치가 이 주의사항을 못 찾습니다.</b>
+     */
+    public CareNoteRule(String id, String careNoteId, short sentNo,
+                        String cautionText, short dp, String careItemId) {
+        this.id = id;
+        this.careNoteId = careNoteId;
+        this.sentNo = sentNo;
+        this.cautionText = cautionText;
+        this.dp = dp;
+        this.careItemId = careItemId;
+    }
 
     public String id()         { return id; }
     public short sentNo()      { return sentNo; }

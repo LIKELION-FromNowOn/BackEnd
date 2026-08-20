@@ -1,5 +1,8 @@
 package com.youin.now.note;
 
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PutMapping;
 import com.youin.now.common.error.ApiException;
 import com.youin.now.common.error.ErrorCode;
 import com.youin.now.common.response.ApiResponse;
@@ -31,5 +34,23 @@ public class NoteController {
     public ApiResponse<NoteRes> note(@CurrentUser String userId) {
         return ApiResponse.ok(noteService.latest(userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "안내문이 없습니다")));
+    }
+
+    /**
+     * {@code NOW-NOTE-001} 관리 맥락 조회.
+     *
+     * <p><b>등록된 것이 없어도 200 입니다.</b> 명세서가 「404를 내지 않는다」로 정했습니다 —
+     * 처음 쓰는 사람에게 오류를 보여 줄 이유가 없습니다.
+     */
+    @GetMapping
+    public ApiResponse<CareRes> care(@CurrentUser String userId) {
+        return ApiResponse.ok(noteService.careContext(userId));
+    }
+
+    /** {@code NOW-NOTE-002} 관리 맥락 저장. <b>통째로 갈아 끼웁니다</b> */
+    @PutMapping
+    public ApiResponse<CareRes> saveCare(@CurrentUser String userId,
+                                         @Valid @RequestBody CareReq req) {
+        return ApiResponse.ok(noteService.saveCare(userId, req));
     }
 }

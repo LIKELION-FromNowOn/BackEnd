@@ -31,7 +31,7 @@ public class CareNote {
     private String title;
 
     /** 발신 클리닉. 응답에서는 {@code from} 입니다 */
-    @Column(name = "from_name", nullable = false)
+    @Column(name = "from_name")
     private String fromName;
 
     @Column(name = "is_sample", nullable = false)
@@ -47,6 +47,23 @@ public class CareNote {
     private OffsetDateTime createdAt;
 
     protected CareNote() { }
+
+    /**
+     * {@code PUT /me/care} 가 만드는 관리 맥락.
+     *
+     * <p><b>발신 클리닉이 없습니다.</b> 사용자가 직접 적는 것이라 문서가 없습니다 —
+     * {@code from_name} 을 {@code NULL} 허용으로 바꾼 이유입니다({@code db/patch_note_tables_v1.sql}).
+     *
+     * @param receivedAt <b>{@code ago} 를 날짜로 바꾼 값.</b> 절대 날짜를 받지 않습니다 —
+     *                   {@code daysLeft} 계산의 기준이라 여기가 틀리면 제한이 어긋납니다
+     */
+    public CareNote(String id, String userId, String title, LocalDate receivedAt) {
+        this.id = id;
+        this.userId = userId;
+        this.title = title;
+        this.receivedAt = receivedAt;
+        this.sample = false;
+    }
 
     public String id()            { return id; }
     public String title()         { return title; }
