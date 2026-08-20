@@ -10,14 +10,14 @@ import org.springframework.stereotype.Service;
  * <p>자유 입력 다섯 경로가 전부 이것을 거칩니다.
  * <b>LLM 에 보내기 전, 저장하기 전에</b> 부르십시오. 프롬프트로 막으려 하지 마십시오.
  *
- * <p>키워드는 {@link SafetyKeywords} 에 있습니다. <b>2026-08-20 김민정 님 확정본(24개)입니다.</b> 초안 11개에서 늘었고 뺀 것은 없습니다.
+ * <p>키워드는 {@link SafetyKeywords} 에 있습니다. <b>2026-08-20 16:20 기준 20개입니다.</b> 확정본 24개에서 「사라지고 싶」·「없어지고 싶」을 뺐습니다 ({@code REQUESTS} #41).
  */
 @Service
 public class SafetyService implements SafetyPort {
 
     private final List<String> keywords;
 
-    public SafetyService() { this(SafetyKeywords.CONFIRMED_24); }
+    public SafetyService() { this(SafetyKeywords.CONFIRMED_20); }
 
     public SafetyService(List<String> keywords) { this.keywords = List.copyOf(keywords); }
 
