@@ -52,6 +52,10 @@ public enum ErrorCode {
     ALREADY_COMPLETED (HttpStatus.CONFLICT,         "이미 완료한 행동은 바꿀 수 없습니다"),
     NO_EVALUATION     (HttpStatus.CONFLICT,         "덜어내기를 먼저 진행해 주세요"),
 
+    // 기록
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "조회 기간이 올바르지 않습니다"),
+    INVALID_PERIOD    (HttpStatus.BAD_REQUEST, "조회 단위가 올바르지 않습니다"),
+
     // AI
     LLM_UNAVAILABLE (HttpStatus.SERVICE_UNAVAILABLE, "기본값으로 처리했습니다"),
     TEXT_REJECTED   (HttpStatus.BAD_REQUEST,         "응답을 다시 생성했습니다");
