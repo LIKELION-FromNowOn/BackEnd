@@ -31,6 +31,9 @@ public class CheckinService {
     /** 전환 제안 임계값. <b>명세서 값이며 코드에서 바꾸지 마십시오.</b> */
     private static final int THRESHOLD = 5;
 
+    /** 조회 응답도 같은 임계값을 써야 해서 밖으로 엽니다. */
+    public static int threshold() { return THRESHOLD; }
+
     /** 징후 14개의 가중치 합. 명세서 {@code maxScore} */
     private static final int MAX_SCORE = 25;
 
@@ -71,9 +74,9 @@ public class CheckinService {
 
         // 마스터 징후는 중복을 지웁니다. 같은 것을 두 번 고르면 점수가 두 배가 됩니다
         Set<String> ids = new LinkedHashSet<>(req.signalIdsOrEmpty());
-        Map<String, Integer> found = weights.weights(ids);
+        List<SignalWeightPort.SignalInfo> found = weights.find(ids);
 
-        int score = found.values().stream().mapToInt(Integer::intValue).sum()
+        int score = found.stream().mapToInt(SignalWeightPort.SignalInfo::weight).sum()
                   + req.customSignalsOrEmpty().size() * CUSTOM_SIGNAL_SCORE;
         short signalScore = (short) Math.min(score, MAX_SCORE);
 
@@ -87,7 +90,8 @@ public class CheckinService {
         signals.deleteByCheckinId(checkin.id());
         List<CheckinSignal> rows = new ArrayList<>();
         for (String sid : ids) {
-            if (found.containsKey(sid)) rows.add(CheckinSignal.ofMaster(Ids.of("cs"), checkin.id(), sid));
+            if (found.stream().anyMatch(f -> f.id().equals(sid)))
+                rows.add(CheckinSignal.ofMaster(Ids.of("cs"), checkin.id(), sid));
         }
         for (String text : req.customSignalsOrEmpty()) {
             rows.add(CheckinSignal.ofCustom(Ids.of("cs"), checkin.id(), text));
@@ -104,7 +108,10 @@ public class CheckinService {
                 MAX_SCORE,
                 proposed,
                 proposed ? proposedState(condition).code() : null,
-                proposed ? List.of() : null,   // 근거 문구는 마스터 징후 이름에서 옵니다. 시드 대기
+                // 명세서의 reasons — 고른 마스터 징후 이름을 가중치 큰 것부터.
+                // 2026-08-20 까지 빈 배열이었습니다. 근거 없는 전환 제안이 화면에 떴습니다.
+                // 직접 입력한 것은 넣지 않습니다 — 명세 예시가 마스터 이름만 보여 줍니다
+                proposed ? found.stream().map(SignalWeightPort.SignalInfo::name).toList() : null,
                 proposed ? null : "신호 강도 " + signalScore + " / " + MAX_SCORE
                                   + " — 아직 상태 전환으로 판단하지 않습니다.",
                 condition.recommendationPaused(),

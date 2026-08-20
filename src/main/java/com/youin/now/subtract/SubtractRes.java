@@ -4,32 +4,46 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 
 /**
- * {@code POST /subtract/evaluate} · {@code GET /subtract/latest} 응답.
+ * {@code NOW-SUB-001} · {@code NOW-SUB-002} 응답.
  *
- * <p><b>{@code generatedBy} 를 항상 채웁니다.</b> 발표에서 「AI 가 진짜 도는지」를 이 필드로 보여 줍니다.
+ * <p><b>필드 이름과 순서는 노션 API 명세서 그대로입니다.</b> 2026-08-20 에 대조해서
+ * 어긋난 것을 고쳤습니다 — 배열 이름이 {@code items} 였는데 명세는 {@code results} 이고,
+ * {@code name} · {@code evidenceLevel} · {@code createdAt} · {@code filter} 가 빠져 있었습니다.
+ * <b>프론트 목 함수가 명세대로 쓰여 있어서, 고치지 않았으면 화면이 빈 목록으로 떴습니다.</b>
+ *
+ * <p>{@code null} 인 필드는 응답에서 빠집니다. 명세가 「제안이 없으면 필드 없음」으로
+ * 적어 둔 자리들이 있어서입니다.
+ *
+ * @param filter 적용된 {@code verdict} 필터. <b>없으면 빈 배열</b>입니다 ({@code null} 아님)
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record SubtractRes(
         String evaluationId,
         String checkinId,
+        String createdAt,
         String state,
         String judgeStrength,
+        List<String> filter,
         String generatedBy,
         Summary summary,
-        List<Item> items) {
+        List<Item> results) {
 
-    /** 홈이 쓰는 얇은 것. 판정 32건 전부가 아니라 개수 다섯 개만 */
+    /**
+     * 판정별 건수.
+     *
+     * <p><b>필터를 걸어도 전체 기준입니다.</b> 명세가 그렇게 정했습니다 —
+     * 필터가 걸린 화면에서도 사용자가 오늘 전체 그림을 볼 수 있어야 하기 때문입니다.
+     */
     public record Summary(int keep, int simplify, int reduce, int skip, int excluded) {}
 
     /**
-     * @param excludedBy   {@code excluded} 일 때만. {@code medical} 또는 {@code clinicNote}
-     * @param noteSent     {@code clinicNote} 일 때만. 안내문 원문 문장 번호
-     * @param daysLeft     {@code clinicNote} 일 때만. <b>조회 시점에 다시 계산한 값</b>
-     * @param floorApplied 서버가 판정을 하한선으로 되돌렸으면 true
-     * @param revertable   <b>{@code excluded} 는 false.</b> 화면에서 되돌리기 버튼을 띄우지 마십시오
+     * @param revertable <b>명세에 없는 추가 필드입니다.</b> 되돌리기 버튼을 띄울지 판단하는 데 씁니다.
+     *                   더 주는 것은 프론트를 깨뜨리지 않아 넣어 두었습니다
      */
-    public record Item(String itemId, String verdict, String reason,
-                       String floor, boolean floorApplied, boolean reverted,
+    public record Item(String itemId, String name, String frequency,
+                       String verdict, String reason,
+                       String evidenceLevel, String floor,
+                       boolean floorApplied, boolean reverted,
                        boolean revertable,
                        String excludedBy, Integer noteSent, Integer daysLeft) {}
 }
