@@ -45,6 +45,26 @@ public class CoachService {
      */
     private static final int MAX_ANSWER = 220;
 
+    /**
+     * 재생성 지시문. <b>1회만 붙습니다.</b>
+     *
+     * <p>{@code docs/prompts/04-coach-answer.md:149·152} 가 「브랜드명·제품명 → 1회 재생성,
+     * 또 걸리면 사전 문장」 · 「120자 초과 → 재생성 1회」로 정해 둔 것입니다.
+     *
+     * <p>내용은 {@code acceptable()} 이 실제로 보는 것과 같게 적었습니다.
+     * 검사와 지시문이 어긋나면 모델이 고칠 수 없는 것을 고치려 듭니다.
+     */
+    private static final String RETRY_NOTE = """
+
+
+            [다시 씁니다]
+            직전 답이 서버 검사에 걸렸습니다. 아래를 지켜 다시 쓰십시오.
+            - 120자 이내, 한 문단
+            - 느낌표를 쓰지 않습니다
+            - 「치료됩니다 · 효과가 있습니다 · 완치」 같은 단정을 쓰지 않습니다
+            - 제품이나 브랜드를 말하지 않습니다
+            - 근거에 없는 숫자를 쓰지 않습니다""";
+
     private final SafetyPort safety;
     private final NoteService notes;
     private final LlmClient llm;
@@ -97,9 +117,20 @@ public class CoachService {
                 rule.sentenceNo(), rule.daysLeft(), sourceText);
 
         // ④ 문장 생성. 실패하면 폴백이고 앱은 안 죽습니다
-        CoachAnswer out = llm.ask(systemPrompt, payload(question, "no", basis), CoachAnswer.class);
+        String payload = payload(question, "no", basis);
+        CoachAnswer out = llm.ask(systemPrompt, payload, CoachAnswer.class);
 
-        // ⑤ 근거 부착 · 금칙어 검사
+        // ⑤ 근거 부착 · 금칙어 검사.
+        //
+        // 걸리면 1회만 다시 씁니다 — docs/prompts/04-coach-answer.md:149·152.
+        // 호출 자체가 실패한 경우(out == null)는 다시 부르지 않습니다.
+        // 원인이 타임아웃이나 네트워크면 한 번 더 불러도 같고,
+        // 응답 시간만 10초에서 20초가 됩니다. 규칙에 걸린 것만 다시 씁니다.
+        if (out != null && !acceptable(out.answer())) {
+            log.info("코치 답 재생성 1회");
+            out = llm.ask(systemPrompt + RETRY_NOTE, payload, CoachAnswer.class);
+        }
+
         if (out == null || !acceptable(out.answer())) {
             return new CoachRes(
                     CoachSentences.CLINIC_FIRST + CoachSentences.fallback("no"),
