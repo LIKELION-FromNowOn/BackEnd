@@ -9,4 +9,6 @@ public interface MasterCareItemRepository extends JpaRepository<MasterCareItem, 
 
     /** {@code care_items} 에 {@code sort_order} 가 없어 카테고리·id 순입니다 */
     List<MasterCareItem> findAllByOrderByCategoryIdAscIdAsc();
+
+    List<MasterCareItem> findAllByCategoryIdOrderByIdAsc(String categoryId);
 }

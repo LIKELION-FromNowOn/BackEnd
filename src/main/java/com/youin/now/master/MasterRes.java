@@ -6,11 +6,10 @@ import java.util.List;
 /**
  * 마스터 3건 응답 {@code NOW-MASTER-001~003}.
  *
- * <p><b>id 필드 이름이 {@code id} 가 아닙니다.</b> 프론트 목({@code src/api/master.js})이
- * {@code categoryId} · {@code itemId} · {@code signalId} 를 기다립니다.
+ * <p><b>{@code /categories} 와 {@code /care-items} 는 {@code data} 가 바로 배열입니다.</b>
+ * 프론트가 {@code http<any[]>('GET', '/categories')} 로 배열을 기다립니다.
  *
- * <p>세 응답 모두 <b>배열을 봉투에 한 번 더 감쌉니다</b> —
- * {@code categories} · {@code careItems} · {@code signals}.
+ * <p>{@code /signals} 만 객체입니다 — {@code threshold} 처럼 목록 밖의 값이 있어서입니다.
  */
 public final class MasterRes {
 
@@ -18,21 +17,25 @@ public final class MasterRes {
 
     // ── NOW-MASTER-001 ────────────────────────────────
 
-    public record Categories(List<Category> categories) { }
+    /**
+     * @param order     노출 순서 1~7
+     * @param itemCount 분류별 항목 수
+     */
+    public record Category(String id, String name, short order, int itemCount) {
 
-    public record Category(String categoryId, String name) {
-        public static Category from(MasterCategory e) {
-            return new Category(e.id(), e.name());
+        public static Category from(MasterCategory e, int itemCount) {
+            return new Category(e.id(), e.name(), e.sortOrder(), itemCount);
         }
     }
 
     // ── NOW-MASTER-002 ────────────────────────────────
 
-    public record CareItems(List<CareItem> careItems) { }
-
+    /**
+     * @param category 카테고리 id. <b>{@code categoryId} 가 아닙니다</b>
+     */
     public record CareItem(
-            String itemId,
-            String categoryId,
+            String id,
+            String category,
             String categoryName,
             String name,
             String floor,
@@ -62,10 +65,26 @@ public final class MasterRes {
 
     // ── NOW-MASTER-003 ────────────────────────────────
 
-    /** 임계값은 서버가 정합니다. 프론트는 계산에 쓰지 않고 표시에만 씁니다 */
-    public record Signals(List<Signal> signals, int transitionThreshold) { }
+    /**
+     * {@code /signals} 만 객체입니다.
+     *
+     * @param threshold    상태 전환 임계값
+     * @param maxScore     전체 가중치 합
+     * @param customWeight 직접 적은 징후 하나당
+     * @param customMax    직접 적을 수 있는 최대
+     * @param groups       화면 그룹 순서. <b>없으면 징후 선택 화면을 못 그립니다</b>
+     */
+    public record Signals(
+            List<Signal> signals,
+            int threshold,
+            int maxScore,
+            int customWeight,
+            int customMax,
+            List<String> groups
+    ) { }
 
-    public record Signal(String signalId, String group, String name, short weight) {
+    public record Signal(String id, String group, String name, short weight) {
+
         public static Signal from(MasterSignal e) {
             return new Signal(e.id(), e.groupName(), e.name(), e.weight());
         }
